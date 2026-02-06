@@ -3,6 +3,9 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
+// Ensure app is server-rendered so Vercel never serves static 404 for any route
+export const dynamic = "force-dynamic";
+
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",

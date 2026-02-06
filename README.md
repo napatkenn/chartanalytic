@@ -99,6 +99,13 @@ Uploaded chart images must be stored in **persistent storage** on Vercel; the se
 
 Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from a CDN (e.g. a custom domain in front of Blob).
 
+### If you get 404 on the root URL or other pages
+
+1. **Deployment Protection** — In Vercel: Project → **Settings** → **Deployment Protection**. If **Vercel Authentication** (or password protection) is enabled, unauthenticated visitors get 401/redirect and can see 404 in some flows. For a public site, turn protection **Off** for Production (or use “Only Preview” and keep Production public).
+2. **Framework and build** — **Settings** → **General**: **Framework Preset** should be **Next.js**. **Build Command** should be `next build` (or empty to use default). **Output Directory** must be **empty** (Next.js uses `.next`; do not set e.g. `out` unless you use static export).
+3. **Production deployment** — **Deployments**: ensure the deployment that works (e.g. latest successful build) is assigned to **Production**. If Production points at an old or failed deployment, you’ll see 404.
+4. **Redeploy** — After changing code or config, push to the connected branch or trigger **Redeploy** so the live URL uses the latest build.
+
 ## Environment summary
 
 | Variable | Purpose |
