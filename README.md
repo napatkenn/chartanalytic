@@ -111,7 +111,7 @@ Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `NEXTAUTH_URL`, `NEXTAUTH_SECRET` | NextAuth (set both on Vercel: URL = your app URL e.g. `https://chartanalytic.vercel.app`; secret = any random string). Login works on preview URLs via `trustHost`. |
+| `NEXTAUTH_URL`, `NEXTAUTH_SECRET` | NextAuth (set both on Vercel: URL = your app URL e.g. `https://chartanalytic.vercel.app`; secret = any random string). Set `AUTH_TRUST_HOST=true` on Vercel so login works on preview URLs. |
 | `OPENAI_API_KEY` | Chart analysis |
 | `STRIPE_*` | Card checkout & webhook |
 | `BOOMFI_API_KEY` | Create crypto pay links (required for Subscribe) |

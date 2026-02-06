@@ -5,7 +5,7 @@ import { compare } from "bcryptjs";
 import { prisma } from "./db";
 
 export const authOptions: NextAuthOptions = {
-  trustHost: true, // Use request host on Vercel so login works on preview and production URLs
+  // On Vercel set AUTH_TRUST_HOST=true so login works on preview and production URLs
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/login", error: "/login" },
   providers: [
