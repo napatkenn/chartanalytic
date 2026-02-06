@@ -14,6 +14,6 @@ function createPrisma(): PrismaClient {
 /** Lazy-initialized so Vercel build (no DATABASE_URL) doesn't fail when loading API routes. */
 export const prisma = new Proxy({} as PrismaClient, {
   get(_, prop) {
-    return (createPrisma() as Record<string | symbol, unknown>)[prop];
+    return (createPrisma() as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
