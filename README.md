@@ -80,6 +80,24 @@ The app requires three **recurring plans** in BoomFi (Starter, Active, Advanced)
 
 Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID_CREDITS` (a Price ID for a one-time product). Point Stripe webhook to `/api/stripe/webhook` and subscribe to `checkout.session.completed`.
 
+## Deploying to Vercel (chart images)
+
+Uploaded chart images must be stored in **persistent storage** on Vercel; the serverless filesystem is ephemeral, so files written in one request are not available in another. To avoid `NOT_FOUND` for chart images:
+
+1. **Add Blob storage**
+   - In the [Vercel Dashboard](https://vercel.com/dashboard): open your project → **Storage** → **Create Database** (or **Connect Store**).
+   - Choose **Blob** and create a new Blob store (name it e.g. `chartanalytic-uploads`).
+   - Vercel will add the env var `BLOB_READ_WRITE_TOKEN` to the project automatically.
+
+2. **Redeploy**
+   - Trigger a new deployment (e.g. push to your connected Git branch, or run `vercel --prod`).
+   - New uploads will be stored in Blob and their URLs will work across all requests.
+
+3. **Old analyses**
+   - Analyses created before Blob was enabled may have chart images that no longer exist. The app shows a friendly “Chart image no longer available” message in that case; the text results (support, resistance, entry, etc.) remain.
+
+Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from a CDN (e.g. a custom domain in front of Blob).
+
 ## Environment summary
 
 | Variable | Purpose |
@@ -91,6 +109,8 @@ Set `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `STRIPE_PRICE_ID_CREDITS` 
 | `BOOMFI_API_KEY` | Create crypto pay links (required for Subscribe) |
 | `BOOMFI_PLAN_ID_STARTER`, `_ACTIVE`, `_ADVANCED` | Recurring plan IDs from BoomFi (required for Subscribe) |
 | `BOOMFI_WEBHOOK_PUBLIC_KEY` | Verify BoomFi webhooks and activate subscriptions |
+| `BLOB_READ_WRITE_TOKEN` | Vercel Blob (set automatically when you add Blob storage); required for chart uploads on Vercel |
+| `STORAGE_BASE_URL` | Optional: base URL for serving uploads (e.g. CDN) |
 
 ## Disclaimer
 

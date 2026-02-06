@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { getUploadUrl } from "@/lib/storage";
 import { formatDistanceToNow } from "date-fns";
 import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
+import { ChartImage } from "@/components/ChartImage";
 import { Disclaimer } from "@/components/Disclaimer";
 import type { MarketBias } from "@/lib/analysis-types";
 
@@ -48,7 +49,7 @@ export default async function AnalysisDetailPage({
           </div>
 
           <div className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-            <img src={getUploadUrl(analysis.imageUrl)} alt="Chart" className="w-full object-contain" />
+            <ChartImage src={getUploadUrl(analysis.imageUrl)} alt="Chart" />
           </div>
 
           <div className="mb-8 grid grid-cols-2 gap-6 sm:grid-cols-3">
