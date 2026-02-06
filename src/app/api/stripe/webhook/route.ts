@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { headers } from "next/headers";
-import { prisma } from "@/lib/db";
 import { addCredits } from "@/lib/credits";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: Request) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+  }
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
   const body = await req.text();
   const headersList = await headers();
