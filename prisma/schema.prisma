@@ -94,9 +94,6 @@ model CreditBalance {
 model Subscription {
   id                     String    @id @default(cuid())
   userId                 String
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
-  stripePriceId          String?
   boomfiSubscriptionId   String?   // BoomFi subscription ID for cancel/change
   status                 String    // active | canceled | past_due | trialing | none
   currentPeriodEnd       DateTime?
