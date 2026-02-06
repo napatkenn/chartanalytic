@@ -8,9 +8,17 @@ import { ScrollingStrip } from "@/components/ScrollingStrip";
 import { Disclaimer } from "@/components/Disclaimer";
 import { PLANS, type PlanTier } from "@/lib/plans";
 
+// Ensure root is always server-rendered so Vercel never serves static 404 for /
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-  if (session?.user?.id) redirect("/dashboard");
+  let session = null;
+  try {
+    session = await getServerSession(authOptions);
+    if (session?.user?.id) redirect("/dashboard");
+  } catch {
+    // If DB/NextAuth fails (e.g. missing env on Vercel), still render landing so / never 404s/500s
+  }
 
   return (
     <div className="min-h-screen bg-white">
