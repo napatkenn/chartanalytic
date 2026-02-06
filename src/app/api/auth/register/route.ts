@@ -32,9 +32,18 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    return NextResponse.json(
-      { error: "Registration failed." },
-      { status: 500 }
-    );
+    const err = e instanceof Error ? e : new Error(String(e));
+    console.error("[register]", err.message, err.cause ?? "");
+    const isDb =
+      err.message.includes("Prisma") ||
+      err.message.includes("connect") ||
+      err.message.includes("ECONNREFUSED") ||
+      err.message.includes("DATABASE") ||
+      err.message.includes("SQLite") ||
+      err.message.includes("file:");
+    const message = isDb
+      ? "Database unavailable. On Vercel set DATABASE_URL to a PostgreSQL connection string (SQLite is not supported)."
+      : "Registration failed.";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -28,7 +28,8 @@ function LoginForm() {
     });
     setLoading(false);
     if (res?.error) {
-      setError("Invalid email or password.");
+      const isConfigError = res.error && /configuration|secret|nextauth/i.test(res.error);
+      setError(isConfigError ? "Server auth is misconfigured. Set NEXTAUTH_SECRET and NEXTAUTH_URL on Vercel." : "Invalid email or password.");
       return;
     }
     if (res?.url) window.location.href = res.url;
