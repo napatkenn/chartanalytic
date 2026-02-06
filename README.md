@@ -95,6 +95,7 @@ Uploaded chart images must be stored in **persistent storage** on Vercel; the se
 
 3. **Old analyses**
    - Analyses created before Blob was enabled may have chart images that no longer exist. The app shows a friendly “Chart image no longer available” message in that case; the text results (support, resistance, entry, etc.) remain.
+   - To clear old upload URLs in the database (stops 404s for those analyses), run once with your production `DATABASE_URL`: **`npm run db:clear-old-uploads`**
 
 Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from a CDN (e.g. a custom domain in front of Blob).
 
