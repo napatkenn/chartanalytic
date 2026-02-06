@@ -114,11 +114,11 @@ If **login does nothing** or you see NextAuth errors, or **registration shows "R
    - `NEXTAUTH_SECRET` — any long random string (e.g. run `openssl rand -base64 32` and paste the result).
    - `NEXTAUTH_URL` — your app URL, e.g. `https://chartanalytic.vercel.app` (or leave unset and set `AUTH_TRUST_HOST=true` for preview URLs).
    - `AUTH_TRUST_HOST` — set to `true` so sign-in works on preview deployment URLs.
-2. **Register** — The app needs a **database**. SQLite (`file:./prisma/dev.db`) does **not** work on Vercel (read-only filesystem). Use **PostgreSQL**:
-   - Add a Postgres database (e.g. [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres), Neon, or Supabase).
-   - In Prisma, switch to Postgres: in `prisma/schema.prisma` set `provider = "postgresql"` and `url = env("DATABASE_URL")`.
-   - Run `npx prisma generate` and `npx prisma db push` (or migrate) against the new DB, then set `DATABASE_URL` in Vercel to the Postgres connection string.
-   - Redeploy.
+2. **Register** — The app uses **PostgreSQL** (schema is already set to `postgresql`). On Vercel you must set `DATABASE_URL` to a Postgres connection string:
+   - Create a Postgres database: [Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres), [Neon](https://neon.tech), or [Supabase](https://supabase.com) (all have free tiers).
+   - Copy the connection string (e.g. `postgresql://user:pass@host/db?sslmode=require`).
+   - In Vercel → **Settings** → **Environment Variables**, add `DATABASE_URL` with that value (Production and Preview).
+   - Locally, run `npx prisma db push` (or `prisma migrate deploy`) with the same URL in `.env` to create tables. Then redeploy on Vercel.
 
 ## Environment summary
 
