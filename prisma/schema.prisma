@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  passwordHash     String?   // for credentials provider
+  image            String?
+  emailVerified    DateTime?
+  trialActivatedAt DateTime? // when user claimed launch offer (3 free credits)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  analyses      ChartAnalysis[]
+  creditBalance CreditBalance?
+  subscriptions Subscription[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token      String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model ChartAnalysis {
+  id          String   @id @default(cuid())
+  userId      String
+  imageUrl    String   // stored path or S3 key
+  timeframe   String?  // e.g. "5m", "15m"
+  symbol      String?  // trading pair when detectable e.g. "BTC/USD", "EURUSD"
+  marketBias  String   // bullish | bearish | range
+  support     String   // JSON array of levels, e.g. ["1.05","1.04"]
+  resistance  String
+  entry       String?
+  takeProfit  String?
+  stopLoss    String?
+  riskReward  String?
+  reasoning   String
+  rawResponse String?  // full AI response for audit
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CreditBalance {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  credits   Int      @default(0) // optional one-time credits; subscription required for service
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  boomfiSubscriptionId   String?   // BoomFi subscription ID for cancel/change
+  status                 String    // active | canceled | past_due | trialing | none
+  currentPeriodEnd       DateTime?
+  planTier               String?   // starter | active | advanced (BoomFi subscription tier)
+  cancelAtPeriodEnd      Boolean?  @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

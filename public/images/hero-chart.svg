@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 280" fill="none" class="w-full h-auto">
+  <defs>
+    <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.7" />
+    </linearGradient>
+  </defs>
+  <!-- Chart area -->
+  <rect x="40" y="30" width="320" height="200" rx="8" stroke="rgba(255,255,255,0.08)" stroke-width="1" fill="rgba(255,255,255,0.02)" />
+  <!-- Candlestick bodies -->
+  <rect x="70" y="80" width="24" height="40" rx="2" fill="url(#heroGrad)" opacity="0.9" />
+  <rect x="110" y="60" width="24" height="60" rx="2" fill="url(#heroGrad)" opacity="0.85" />
+  <rect x="150" y="95" width="24" height="30" rx="2" fill="rgba(239,68,68,0.6)" />
+  <rect x="190" y="70" width="24" height="55" rx="2" fill="url(#heroGrad)" opacity="0.9" />
+  <rect x="230" y="50" width="24" height="75" rx="2" fill="url(#heroGrad)" opacity="0.95" />
+  <rect x="270" y="85" width="24" height="45" rx="2" fill="rgba(239,68,68,0.5)" />
+  <rect x="310" y="65" width="24" height="65" rx="2" fill="url(#heroGrad)" opacity="0.9" />
+  <!-- Wicks -->
+  <line x1="82" y1="50" x2="82" y2="120" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="122" y1="40" x2="122" y2="120" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="162" y1="85" x2="162" y2="135" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="202" y1="55" x2="202" y2="125" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="242" y1="35" x2="242" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="282" y1="75" x2="282" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <line x1="322" y1="45" x2="322" y2="130" stroke="rgba(255,255,255,0.2)" stroke-width="1" />
+  <!-- AI sparkle -->
+  <circle cx="340" cy="45" r="20" fill="rgba(6,182,212,0.15)" stroke="rgba(6,182,212,0.4)" stroke-width="1" />
+  <path d="M340 32v8l5 5-5 5v8h-8l-5-5 5-5h-8v-8l5-5-5-5v-8h8l5 5-5 5h8z" fill="rgba(6,182,212,0.5)" />
+</svg>

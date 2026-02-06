@@ -1,0 +1,35 @@
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { SessionProvider } from "@/components/SessionProvider";
+import "./globals.css";
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
+
+export const metadata: Metadata = {
+  title: "ChartAnalytic — AI Trading Chart Analysis",
+  description:
+    "Upload charts with multi-timeframe support for AI-powered bias, levels, entry, TP, SL, and reasoning. Not financial advice.",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className="dark">
+      <body
+        className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-surface-950 text-gray-200`}
+      >
+        <SessionProvider>{children}</SessionProvider>
+      </body>
+    </html>
+  );
+}

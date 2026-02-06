@@ -1,0 +1,70 @@
+import OpenAI from "openai";
+import { z } from "zod";
+import type { AnalysisResult, MarketBias } from "./analysis-types";
+
+const AnalysisSchema = z.object({
+  marketBias: z.enum(["bullish", "bearish", "range"]),
+  support: z.array(z.string()),
+  resistance: z.array(z.string()),
+  entry: z.string(),
+  takeProfit: z.string(),
+  stopLoss: z.string(),
+  riskReward: z.string(),
+  reasoning: z.string(),
+  symbol: z.string().optional(),
+  timeframe: z.string().optional(),
+});
+
+const SYSTEM_PROMPT = `You are an expert technical analyst. Analyze the provided trading chart screenshot.
+
+IMPORTANT - Read from the chart image:
+1. SYMBOL: Look at the chart title/header for the trading pair (e.g. "BTC/USD", "EURUSD", "Gold Spot / U.S. Dollar", "Silver / U.S. Dollar"). Include it in "symbol" exactly as shown, or omit only if not visible.
+2. TIMEFRAME: If the timeframe is shown (e.g. 1m, 5m, 15m, 1H, 4H, 1D), include it in "timeframe". Assume 5–15m only if nothing is visible.
+
+Return a structured analysis in the following JSON format only (no markdown, no code block):
+{
+  "marketBias": "bullish" | "bearish" | "range",
+  "support": ["level1", "level2"],
+  "resistance": ["level1", "level2"],
+  "entry": "suggested entry price or zone",
+  "takeProfit": "TP level(s)",
+  "stopLoss": "SL level",
+  "riskReward": "e.g. 1:2 or 1:1.5",
+  "reasoning": "2-4 sentences on price action, trend, and momentum",
+  "symbol": "trading pair from chart title/header if visible, e.g. BTC/USD, Gold Spot / U.S. Dollar",
+  "timeframe": "timeframe from chart if visible, e.g. 5m, 15m, 1H"
+}
+
+Focus on clarity and actionable levels. Use exact numbers from the chart when visible. Keep reasoning concise and trader-focused.`;
+
+export async function analyzeChartImage(imageBase64: string): Promise<AnalysisResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+
+  const openai = new OpenAI({ apiKey });
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    max_tokens: 800,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      {
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            image_url: {
+              url: imageBase64.startsWith("data:") ? imageBase64 : `data:image/png;base64,${imageBase64}`,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  const raw = response.choices[0]?.message?.content?.trim();
+  if (!raw) throw new Error("Empty AI response");
+
+  const parsed = JSON.parse(raw) as unknown;
+  const validated = AnalysisSchema.parse(parsed);
+  return validated as AnalysisResult;
+}
