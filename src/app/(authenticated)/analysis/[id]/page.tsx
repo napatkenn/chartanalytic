@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getUploadUrl } from "@/lib/storage";
 import { formatDistanceToNow } from "date-fns";
 import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
 import { Disclaimer } from "@/components/Disclaimer";
@@ -47,7 +48,7 @@ export default async function AnalysisDetailPage({
           </div>
 
           <div className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-            <img src={analysis.imageUrl} alt="Chart" className="w-full object-contain" />
+            <img src={getUploadUrl(analysis.imageUrl)} alt="Chart" className="w-full object-contain" />
           </div>
 
           <div className="mb-8 grid grid-cols-2 gap-6 sm:grid-cols-3">
