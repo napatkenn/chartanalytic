@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { Logo } from "@/components/Logo";
 
 export function AppHeader({
   session,
@@ -25,14 +25,7 @@ export function AppHeader({
             isLight ? "text-gray-900" : "text-white"
           }`}
         >
-          <Image
-            src="/images/logo.svg"
-            alt=""
-            width={28}
-            height={28}
-            className={`shrink-0 ${isLight ? "opacity-90" : "invert opacity-90"}`}
-            aria-hidden
-          />
+          <Logo size={28} invert={!isLight} />
           <span className="whitespace-nowrap">{"ChartAnalytic".slice(0, 5)}<span className="text-emerald-500 m-0 p-0">{"ChartAnalytic"[5]}</span>{"ChartAnalytic".slice(6)}</span>
         </Link>
 

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getActiveSubscription, getRemainingUploadsToday } from "@/lib/subscription";
 import { getOrCreateCredits } from "@/lib/credits";
-import { AppSidebar } from "@/components/AppSidebar";
+import { DashboardShell } from "@/components/DashboardShell";
 import { TrialOfferPopup } from "@/components/TrialOfferPopup";
 
 export default async function AuthenticatedLayout({
@@ -29,16 +29,15 @@ export default async function AuthenticatedLayout({
   return (
     <div className="min-h-screen bg-white">
       <TrialOfferPopup />
-      <AppSidebar
+      <DashboardShell
         user={session.user}
         credits={credits}
         planTier={planTier}
         hasSubscription={hasSubscription}
         usage={usage}
-      />
-      <div className="pl-56">
+      >
         {children}
-      </div>
+      </DashboardShell>
     </div>
   );
 }

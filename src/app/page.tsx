@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Logo } from "@/components/Logo";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -30,7 +31,7 @@ export default async function HomePage() {
           <div className="container mx-auto max-w-4xl text-center">
             <div className="mb-6 flex justify-center">
               <div className="flex items-center gap-3">
-                <Image src="/images/logo.svg" alt="" width={40} height={40} className="shrink-0 opacity-90" aria-hidden />
+                <Logo size={40} />
                 <span className="text-2xl font-bold tracking-tight text-gray-900">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
               </div>
             </div>
