@@ -8,6 +8,7 @@ node_modules/
 out/
 build/
 dist/
+.cache/
 
 # Env (never commit secrets)
 .env
