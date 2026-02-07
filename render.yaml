@@ -1,6 +1,15 @@
 # Render Blueprint: social-agent cron job only.
 # In Render: New → Blueprint → connect repo → Blueprint path: render.yaml (default)
-# Add env vars in Dashboard (X_API_*, CHART_ANALYTIC_URL, ANALYZE_IMAGE_SECRET, etc.)
+#
+# Required env vars (set in Render Dashboard → chart-social-agent → Environment):
+#
+#   Analysis — prefer OPENAI_API_KEY (recommended for cron; avoids Vercel blocking):
+#     OPENAI_API_KEY = your OpenAI API key
+#   Alternative: CHART_ANALYTIC_URL + ANALYZE_IMAGE_SECRET (can be blocked by Vercel Security Checkpoint)
+#
+#   For posting to X (required unless using --dry-run):
+#     X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
+#
 # Chrome for Puppeteer is installed in build so the cron can capture/screenshot.
 
 services:

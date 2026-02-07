@@ -1,7 +1,7 @@
 /**
  * Run chart analysis on an image file.
- * Prefers Chart Analytic app API (upload image, get analysis) when CHART_ANALYTIC_URL + ANALYZE_IMAGE_SECRET are set.
- * Otherwise uses OpenAI directly (OPENAI_API_KEY).
+ * Prefers OpenAI direct (OPENAI_API_KEY) when set — avoids Vercel blocking cron requests.
+ * Falls back to Chart Analytic app API when CHART_ANALYTIC_URL + ANALYZE_IMAGE_SECRET are set (no OPENAI_API_KEY).
  */
 
 const fs = require("fs").promises;
@@ -32,11 +32,17 @@ async function analyzeImageViaApp(imagePath) {
 
   if (!res.ok) {
     const text = await res.text();
+    const isBlocked = res.status === 429 || (text && text.includes("Vercel Security Checkpoint"));
+    if (isBlocked) {
+      throw new Error(
+        "Chart Analytic API blocked (429 / Vercel Security Checkpoint). Set OPENAI_API_KEY on Render so the cron uses OpenAI directly and does not call Vercel."
+      );
+    }
     let err;
     try {
       err = JSON.parse(text).error || text;
     } catch {
-      err = text;
+      err = text.slice(0, 200);
     }
     throw new Error(`Chart Analytic API: ${res.status} ${err}`);
   }
@@ -70,7 +76,11 @@ Focus on clarity and actionable levels. Use exact numbers from the chart when vi
 /** Analyze via OpenAI directly (same logic as main app). */
 async function analyzeImageOpenAI(imagePath) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY is not set. Either set OPENAI_API_KEY in Render, or use Chart Analytic app by setting CHART_ANALYTIC_URL and ANALYZE_IMAGE_SECRET."
+    );
+  }
 
   const buffer = await fs.readFile(imagePath);
   const base64 = buffer.toString("base64");
@@ -97,15 +107,18 @@ async function analyzeImageOpenAI(imagePath) {
 }
 
 /**
- * Analyze image: use Chart Analytic app API if configured, else OpenAI direct.
+ * Analyze image: prefer OpenAI direct (avoids Vercel blocking cron). Else use Chart Analytic app.
  */
 async function analyzeImage(imagePath) {
+  if (process.env.OPENAI_API_KEY) {
+    return analyzeImageOpenAI(imagePath);
+  }
   const baseUrl = process.env.CHART_ANALYTIC_URL;
   const secret = process.env.ANALYZE_IMAGE_SECRET;
   if (baseUrl && secret) {
     return analyzeImageViaApp(imagePath);
   }
-  return analyzeImageOpenAI(imagePath);
+  return analyzeImageOpenAI(imagePath); // throws clear error about OPENAI_API_KEY
 }
 
 /** 3–5 forex hashtags for X */
