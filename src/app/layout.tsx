@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SessionProvider } from "@/components/SessionProvider";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 // Ensure app is server-rendered so Vercel never serves static 404 for any route
@@ -33,6 +34,7 @@ export default function RootLayout({
         className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-gray-50 text-gray-900`}
       >
         <SessionProvider>{children}</SessionProvider>
+        <GoogleAnalytics />
         <SpeedInsights />
       </body>
     </html>
