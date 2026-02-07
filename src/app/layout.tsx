@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SessionProvider } from "@/components/SessionProvider";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
         className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-gray-50 text-gray-900`}
       >
         <SessionProvider>{children}</SessionProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
