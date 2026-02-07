@@ -92,6 +92,23 @@ To run at the correct UTC times, schedule the script.
 
 **Vercel Cron:** You can expose an API route that runs the agent and call it from [Vercel Cron](https://vercel.com/docs/cron-jobs); the route must authenticate (e.g. CRON_SECRET) and run the capture/post logic or shell out to the script.
 
+## Test: TradingView → app flow
+
+To verify how the image is captured and sent to your app:
+
+```bash
+# 1. Capture from TradingView and (if env set) send to app
+node social-agent/test-tradingview-to-app.js eurusd
+
+# 2. Use latest image in output/ and send to app (no new capture)
+node social-agent/test-tradingview-to-app.js
+
+# 3. Only capture, do not call app
+node social-agent/test-tradingview-to-app.js eurusd --capture-only
+```
+
+Step 1 saves the chart to `social-agent/output/test-flow-eurusd-<timestamp>.png`. If `CHART_ANALYTIC_URL` and `ANALYZE_IMAGE_SECRET` are set and the app is running, the script then POSTs that image to `/api/analyze-image` and prints the analysis. Otherwise it only runs the capture and reminds you to set the env vars.
+
 ## Notes
 
 - **TradingView**: Charts are loaded in a headless browser. TradingView may rate-limit or block automated access; if captures fail, try running less frequently or with a headed browser / different IP.
