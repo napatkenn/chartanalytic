@@ -7,7 +7,13 @@ export interface AnalysisResult {
   entry: string;
   takeProfit: string;
   stopLoss: string;
+  /** Optional second take profit level */
+  takeProfit2?: string;
+  /** Optional second stop loss level */
+  stopLoss2?: string;
   riskReward: string;
+  /** Confidence in the analysis, 0–100 */
+  confidence?: number;
   reasoning: string;
   /** Trading pair/symbol when visible on chart e.g. "BTC/USD", "EURUSD" */
   symbol?: string;

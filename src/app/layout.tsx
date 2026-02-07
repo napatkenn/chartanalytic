@@ -27,9 +27,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
-        className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-surface-950 text-gray-200`}
+        className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-gray-50 text-gray-900`}
       >
         <SessionProvider>{children}</SessionProvider>
       </body>

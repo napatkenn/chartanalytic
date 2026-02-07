@@ -52,6 +52,12 @@ export default async function AnalysisDetailPage({
             <ChartImage src={getUploadUrl(analysis.imageUrl)} alt="Chart" />
           </div>
 
+          {analysis.confidence != null && (
+            <div className="mb-6 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3">
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Confidence</span>
+              <span className="font-mono text-sm font-medium text-gray-900">{analysis.confidence}%</span>
+            </div>
+          )}
           <div className="mb-8 grid grid-cols-2 gap-6 sm:grid-cols-3">
             <div>
               <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Support</span>
@@ -78,8 +84,16 @@ export default async function AnalysisDetailPage({
               <span className="font-mono text-sm text-emerald-700">{analysis.takeProfit ?? "—"}</span>
             </div>
             <div>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Take profit 2</span>
+              <span className="font-mono text-sm text-emerald-700">{analysis.takeProfit2 ?? "—"}</span>
+            </div>
+            <div>
               <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Stop loss</span>
               <span className="font-mono text-sm text-red-700">{analysis.stopLoss ?? "—"}</span>
+            </div>
+            <div>
+              <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">Stop loss 2</span>
+              <span className="font-mono text-sm text-red-700">{analysis.stopLoss2 ?? "—"}</span>
             </div>
           </div>
 

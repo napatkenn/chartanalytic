@@ -12,7 +12,7 @@ type AnalysisWithMeta = {
 } & AnalysisResult;
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{children}</span>;
+  return <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-600">{children}</span>;
 }
 
 export function AnalysisResultCard({
@@ -27,10 +27,10 @@ export function AnalysisResultCard({
   const bias = analysis.marketBias as MarketBias;
   const biasClass =
     bias === "bullish"
-      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30"
+      ? "bg-emerald-100 text-emerald-800"
       : bias === "bearish"
-        ? "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30"
-        : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30";
+        ? "bg-red-100 text-red-800"
+        : "bg-amber-100 text-amber-800";
 
   return (
     <div className="space-y-5">
@@ -38,58 +38,72 @@ export function AnalysisResultCard({
         <span className={`rounded-lg border px-2.5 py-1 text-sm font-medium ${biasClass}`}>
           {MARKET_BIAS_LABELS[bias] ?? analysis.marketBias}
         </span>
-        <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
+        <span className="font-mono text-xs text-gray-600">
           {formatDistanceToNow(new Date(analysis.createdAt), { addSuffix: true })}
         </span>
         {dailyLimit != null ? (
-          <span className="text-xs text-gray-500 dark:text-gray-400">· {creditsRemaining} / {dailyLimit} uploads today</span>
+          <span className="text-xs text-gray-600">· {creditsRemaining} / {dailyLimit} uploads today</span>
         ) : (
-          <span className="text-xs text-gray-500 dark:text-gray-400">· {creditsRemaining} credits left</span>
+          <span className="text-xs text-gray-600">· {creditsRemaining} credits left</span>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Support</Label>
-          <ul className="font-mono text-sm text-gray-900 dark:text-gray-200">
+          <ul className="font-mono text-sm text-gray-900">
             {analysis.support.length ? analysis.support.map((s, i) => <li key={i}>{s}</li>) : "—"}
           </ul>
         </div>
         <div>
           <Label>Resistance</Label>
-          <ul className="font-mono text-sm text-gray-900 dark:text-gray-200">
+          <ul className="font-mono text-sm text-gray-900">
             {analysis.resistance.length ? analysis.resistance.map((r, i) => <li key={i}>{r}</li>) : "—"}
           </ul>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 rounded-xl bg-gray-50 p-4 dark:bg-surface-800/50">
+      {analysis.confidence != null && (
+        <div className="rounded-xl border border-gray-200 bg-gray-100 px-4 py-2">
+          <Label>Confidence</Label>
+          <span className="font-mono text-sm font-medium text-gray-900">{analysis.confidence}%</span>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-200 bg-gray-100 p-4 sm:grid-cols-3">
         <div>
           <Label>Entry</Label>
-          <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">{analysis.entry || "—"}</span>
+          <span className="font-mono text-sm font-medium text-emerald-800">{analysis.entry || "—"}</span>
         </div>
         <div>
           <Label>Take profit</Label>
-          <span className="font-mono text-sm text-emerald-700 dark:text-emerald-400">{analysis.takeProfit || "—"}</span>
+          <span className="font-mono text-sm font-medium text-emerald-800">{analysis.takeProfit || "—"}</span>
+        </div>
+        <div>
+          <Label>Take profit 2</Label>
+          <span className="font-mono text-sm font-medium text-emerald-800">{analysis.takeProfit2 || "—"}</span>
         </div>
         <div>
           <Label>Stop loss</Label>
-          <span className="font-mono text-sm text-red-600 dark:text-red-400">{analysis.stopLoss || "—"}</span>
+          <span className="font-mono text-sm font-medium text-red-800">{analysis.stopLoss || "—"}</span>
+        </div>
+        <div>
+          <Label>Stop loss 2</Label>
+          <span className="font-mono text-sm font-medium text-red-800">{analysis.stopLoss2 || "—"}</span>
         </div>
         <div>
           <Label>Risk:Reward</Label>
-          <span className="font-mono text-sm text-gray-900 dark:text-gray-200">{analysis.riskReward || "—"}</span>
+          <span className="font-mono text-sm font-medium text-gray-900">{analysis.riskReward || "—"}</span>
         </div>
       </div>
 
       <div>
         <Label>Reasoning</Label>
-        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-400">{analysis.reasoning}</p>
+        <p className="text-sm leading-relaxed text-gray-700">{analysis.reasoning}</p>
       </div>
 
       <Link
         href={`/analysis/${analysis.id}`}
-        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-cyan-400 dark:hover:text-cyan-300"
+        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700"
       >
         View full analysis
         <span aria-hidden>→</span>
