@@ -1,6 +1,6 @@
 /**
  * Capture a TradingView chart as PNG using Puppeteer.
- * By default uses Ctrl+Alt+S (TradingView-style screenshot) and captures the browser download.
+ * Uses programmatic screenshot (chart container clip) by default; set useScreenshotShortcut: true to use TradingView Ctrl+Alt+S instead.
  * Ensures the chart is loaded with the correct timeframe (from URL) before capture.
  * Requires: npm install puppeteer
  * TradingView may block headless browsers; use headed or a residential proxy if needed.
@@ -100,13 +100,13 @@ async function captureChart(url, outputPath, options = {}) {
   const puppeteer = require("puppeteer");
   const { getChromeLaunchOptions } = require("./puppeteer-render");
   const {
-    viewportWidth = 1152,
-    viewportHeight = 648,
+    viewportWidth = 1920,
+    viewportHeight = 1080,
     waitMs = 3000,
     /** Schedule object { timeframe, interval, url } — if set, we wait for this timeframe to be visible */
     schedule = null,
-    /** Use Ctrl+Alt+S and browser download instead of programmatic screenshot */
-    useScreenshotShortcut = true,
+    /** Use Ctrl+Alt+S and browser download instead of programmatic screenshot (default: false = use Puppeteer screenshot only) */
+    useScreenshotShortcut = false,
   } = options;
 
   const browser = await puppeteer.launch({
