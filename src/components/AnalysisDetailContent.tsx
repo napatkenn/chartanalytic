@@ -90,16 +90,7 @@ export function AnalysisDetailContent({ analysis, chartImageUrl }: Props) {
 
   return (
     <div className="space-y-4">
-      <button
-        type="button"
-        onClick={handleDownload}
-        disabled={downloading}
-        className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600 disabled:opacity-60"
-      >
-        {downloading ? "Creating image…" : "Download as image"}
-      </button>
-
-      {/* Single block: header + chart + analysis (captured for export) */}
+      {/* Single block: header + chart + analysis (capture ref kept for programmatic export via handleDownload) */}
       <div
         ref={captureRef}
         className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"

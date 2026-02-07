@@ -7,9 +7,16 @@
 const fs = require("fs").promises;
 const path = require("path");
 
+function normalizeAppUrl(url) {
+  if (!url || !url.trim()) return "http://localhost:3000";
+  const u = url.trim().replace(/\/$/, "");
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  return `https://${u}`;
+}
+
 /** Analyze via Chart Analytic app: POST image to /api/analyze-image, same pipeline as photo upload. */
 async function analyzeImageViaApp(imagePath) {
-  const baseUrl = (process.env.CHART_ANALYTIC_URL || "http://localhost:3000").replace(/\/$/, "");
+  const baseUrl = normalizeAppUrl(process.env.CHART_ANALYTIC_URL || "http://localhost:3000");
   const secret = process.env.ANALYZE_IMAGE_SECRET;
   if (!secret) throw new Error("ANALYZE_IMAGE_SECRET is not set for Chart Analytic API");
 

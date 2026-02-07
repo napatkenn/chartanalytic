@@ -28,6 +28,7 @@ try {
 const { getSchedulesForHour, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
 const { analyzeImage, formatCaption } = require("./analyze");
+const { composeExportImage } = require("./compose-export");
 const postX = require("./post-x");
 
 const OUT_DIR = path.join(__dirname, "output");
@@ -41,26 +42,34 @@ async function runOne(schedule, options = {}) {
   await captureChart(schedule.url, outPath, { waitMs: 4000, schedule });
 
   let caption;
+  let imagePathForPost = outPath;
   if (skipAnalyze) {
     caption = `${schedule.name} ${schedule.timeframe} chart\n#trading #forex #chart`;
   } else {
     console.log(`[${schedule.id}] Analyzing...`);
     const analysis = await analyzeImage(outPath);
     caption = formatCaption(schedule, analysis);
+    // Compose Chart Analytic–style export (chart + analysis panel) and use that for the post
+    const exportPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}-export.png`);
+    console.log(`[${schedule.id}] Composing export image (chart + analysis)...`);
+    await composeExportImage(outPath, analysis, exportPath, {
+      pairLabel: `${schedule.name} ${schedule.timeframe}`,
+    });
+    imagePathForPost = exportPath;
   }
 
   if (dryRun) {
     console.log(`[${schedule.id}] --- Post text (dry-run, not posted) ---`);
     console.log(caption);
-    console.log(`[${schedule.id}] --- Image: ${outPath} ---`);
-    return { dryRun: true, caption, imagePath: outPath };
+    console.log(`[${schedule.id}] --- Image: ${imagePathForPost} ---`);
+    return { dryRun: true, caption, imagePath: imagePathForPost };
   }
 
   if (!postX.isConfigured()) {
     throw new Error("X API not configured. Set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET (from developer.x.com).");
   }
   console.log(`[${schedule.id}] Posting to X...`);
-  const result = await postX.postChart(outPath, caption);
+  const result = await postX.postChart(imagePathForPost, caption);
   console.log(`[${schedule.id}] Done.`, result);
   return result;
 }

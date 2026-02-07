@@ -100,18 +100,11 @@ Targets: 1.1940 → 1.1810
 
 **Windows (Task Scheduler):** Create five tasks for 07:00, 12:00, 15:00, 17:00, 20:00 UTC, action: `node C:\path\to\chartanalytic\social-agent\run.js`.
 
-## Test: TradingView → app flow
-
-```bash
-node social-agent/test-tradingview-to-app.js eurusd   # capture + send to app
-node social-agent/test-tradingview-to-app.js          # use latest image, send to app
-node social-agent/test-tradingview-to-app.js eurusd --capture-only  # capture only
-```
-
 ## Notes
 
 - **TradingView**: Charts are loaded in a headless browser. TradingView may rate-limit or block automated access; if captures fail, try running less frequently or with a headed browser.
 - **Output**: Screenshots are written to `social-agent/output/` (gitignored).
+- **X 403 on media upload**: In the [X Developer Portal](https://developer.x.com), ensure your app has **Read and write** (or **Read and write and Direct messages**) access and that the app is not in **Read only** mode. **Regenerate the Access Token** after changing permissions (old tokens do not get new permissions). If you still get 403, the script will show the API error message and will try a fallback upload format (base64); see [X 403 Forbidden discussion](https://devcommunity.x.com/t/403-forbidden-in-any-request/234743).
 
 ## References
 

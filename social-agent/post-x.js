@@ -39,41 +39,95 @@ function getConfig() {
 
 /**
  * Upload image to X; returns media_id_string.
+ * Tries multipart first, then base64 (application/x-www-form-urlencoded) to avoid 403 from multipart/OAuth issues.
  */
 async function uploadMedia(filePath) {
   const { apiKey, apiSecret, accessToken, accessTokenSecret } = getConfig();
   const url = "https://upload.twitter.com/1.1/media/upload.json";
   const buffer = fs.readFileSync(filePath);
 
-  const oauth = {
+  const baseOauth = () => ({
     oauth_consumer_key: apiKey,
     oauth_nonce: crypto.randomBytes(16).toString("hex"),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
     oauth_token: accessToken,
     oauth_version: "1.0",
-  };
-  oauth.oauth_signature = oauth1Sign("POST", url, oauth, apiSecret, accessTokenSecret);
-  const authHeader =
-    "OAuth " +
-    Object.entries(oauth)
-      .map(([k, v]) => `${rfc3986(k)}="${rfc3986(v)}"`)
-      .join(", ");
+  });
 
+  // 1) Try multipart/form-data (media + media_category)
   const form = new FormData();
   form.append("media", new Blob([buffer], { type: "image/png" }), path.basename(filePath) || "chart.png");
+  form.append("media_category", "tweet_image");
 
-  const res = await fetch(url, {
+  const oauthMultipart = baseOauth();
+  oauthMultipart.oauth_signature = oauth1Sign("POST", url, oauthMultipart, apiSecret, accessTokenSecret);
+
+  const authHeaderMultipart =
+    "OAuth " +
+    Object.entries(oauthMultipart)
+      .map(([k, v]) => `${rfc3986(k)}="${rfc3986(String(v))}"`)
+      .join(", ");
+
+  let res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: authHeader },
+    headers: { Authorization: authHeaderMultipart },
     body: form,
   });
+
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`X media upload failed: ${res.status} ${text}`);
+    const errDetail = (res.status === 401 || res.status === 403) ? formatXErrorHint(res.status, text) : "";
+    if (res.status === 403) {
+      // 2) Fallback: base64 media_data with application/x-www-form-urlencoded (avoids multipart/OAuth quirks)
+      const mediaData = buffer.toString("base64");
+      const bodyParams = { media_data: mediaData, media_category: "tweet_image" };
+      const signParams = { ...baseOauth(), ...bodyParams };
+      const sig = oauth1Sign("POST", url, signParams, apiSecret, accessTokenSecret);
+      const oauthForHeader = { ...baseOauth(), oauth_signature: sig };
+      const authHeaderForm =
+        "OAuth " +
+        Object.entries(oauthForHeader)
+          .map(([k, v]) => `${rfc3986(k)}="${rfc3986(String(v))}"`)
+          .join(", ");
+      const body = new URLSearchParams(bodyParams).toString();
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: authHeaderForm,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      if (!res.ok) {
+        const text2 = await res.text();
+        throw new Error(`X media upload failed: ${res.status} ${text2}${formatXErrorHint(res.status, text2)}`);
+      }
+    } else {
+      throw new Error(`X media upload failed: ${res.status} ${text}${errDetail}`);
+    }
   }
+
   const data = await res.json();
   return data.media_id_string;
+}
+
+function formatXErrorHint(status, responseText) {
+  let hint = "";
+  try {
+    const j = JSON.parse(responseText);
+    const msg = j.errors && j.errors[0] ? j.errors[0].message : "";
+    if (status === 401) {
+      hint = "\n401 hint: Check all four credentials (X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET). Regenerate Access Token in developer.x.com → Keys and tokens and use the new values.";
+    } else if (status === 403) {
+      hint = "\n403 hint: Set app to \"Read and write\" in developer.x.com → your app → Settings → User authentication settings, then regenerate the Access Token (Keys and tokens) and use the new token.";
+    }
+    if (msg) hint += ` API message: ${msg}`;
+  } catch (_) {
+    if (status === 401) hint = "\n401 hint: Check credentials and regenerate Access Token.";
+    else if (status === 403) hint = "\n403 hint: Set app to Read and write and regenerate Access Token.";
+  }
+  return hint;
 }
 
 /**
@@ -114,7 +168,8 @@ async function createTweet(text, mediaIdString) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`X create tweet failed: ${res.status} ${text}`);
+    const hint = (res.status === 401 || res.status === 403) ? formatXErrorHint(res.status, text) : "";
+    throw new Error(`X create tweet failed: ${res.status} ${text}${hint}`);
   }
   return res.json();
 }
