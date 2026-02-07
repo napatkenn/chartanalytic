@@ -87,6 +87,16 @@ Targets: 1.1940 → 1.1810
 #forex #trading #fx #technicalanalysis #forexsignals
 ```
 
+## Running on Render (cron)
+
+The repo includes a **Blueprint** (`render.yaml`) for a Render cron job. The build runs `npx puppeteer browsers install chrome` so Chrome is available when the cron runs.
+
+If you still see **"Could not find Chrome"** on Render:
+
+1. In the Render Dashboard → your **chart-social-agent** cron job → **Environment**.
+2. Add: **`PUPPETEER_CACHE_DIR`** = **`.cache/puppeteer`** (so Chrome is stored in the project and persists from build to run).
+3. Trigger a **manual deploy** (or push a commit) so the build runs again with this env var.
+
 ## Scheduling (cron / Task Scheduler)
 
 **Linux/macOS (cron):**

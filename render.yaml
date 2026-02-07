@@ -1,6 +1,7 @@
 # Render Blueprint: social-agent cron job only.
 # In Render: New → Blueprint → connect repo → Blueprint path: render.yaml (default)
 # Add env vars in Dashboard (X_API_*, CHART_ANALYTIC_URL, ANALYZE_IMAGE_SECRET, etc.)
+# Chrome for Puppeteer is installed in build so the cron can capture/screenshot.
 
 services:
   - type: cron
@@ -9,5 +10,5 @@ services:
     plan: starter
     # Run at 07:00, 12:00, 15:00, 17:00, 20:00 UTC (run.js runs all schedules due at current hour)
     schedule: "0 7,12,15,17,20 * * *"
-    buildCommand: npm install
+    buildCommand: npm install && npx puppeteer browsers install chrome
     startCommand: node social-agent/run.js
