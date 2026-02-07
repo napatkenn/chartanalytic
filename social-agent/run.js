@@ -86,9 +86,9 @@ async function main() {
   const dryRun = args.includes("--dry-run");
   const filtered = args.filter((a) => !a.startsWith("--"));
 
-  // Cron jitter: when run by cron (no schedule id), wait 1–10 min so runs aren't all at exact :00
+  // Cron jitter: when run by cron (no schedule id), wait 1–5 min so runs aren't all at exact :00
   if (filtered.length === 0) {
-    const jitterMin = 1 + Math.floor(Math.random() * 10);
+    const jitterMin = 1 + Math.floor(Math.random() * 5);
     const jitterMs = jitterMin * 60 * 1000;
     console.log(`Cron jitter: waiting ${jitterMin} min before running...`);
     await sleep(jitterMs);
