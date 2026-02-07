@@ -43,7 +43,7 @@ Return a structured analysis in the following JSON format only (no markdown, no 
 
 Focus on clarity and actionable levels. Use exact numbers from the chart when visible. Keep reasoning concise and trader-focused.`;
 
-const OPENAI_TIMEOUT_MS = 90_000; // 90s — avoid Vercel 300s function timeout
+const OPENAI_TIMEOUT_MS = 120_000; // 120s — balance completion rate vs Vercel 300s limit
 
 export async function analyzeChartImage(imageBase64: string): Promise<AnalysisResult> {
   const apiKey = process.env.OPENAI_API_KEY;

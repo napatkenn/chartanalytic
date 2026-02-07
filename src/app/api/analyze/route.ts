@@ -82,20 +82,24 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(arrayBuffer);
   const imageUrl = await saveUpload(buffer, file.type);
 
-  // Resize for analysis to speed up OpenAI and avoid timeout (keep original for storage)
-  let analysisBuffer: Buffer;
+  // Resize for analysis to speed up OpenAI (skip if sharp fails or hangs — avoid blocking)
+  const SHARP_TIMEOUT_MS = 15_000;
+  let analysisBuffer: Buffer = buffer;
   try {
-    const meta = await sharp(buffer).metadata();
-    const w = meta.width ?? 0;
-    const h = meta.height ?? 0;
-    if (w <= ANALYSIS_MAX_PX && h <= ANALYSIS_MAX_PX) {
-      analysisBuffer = buffer;
-    } else {
-      analysisBuffer = await sharp(buffer)
+    const resizePromise = (async () => {
+      const meta = await sharp(buffer).metadata();
+      const w = meta.width ?? 0;
+      const h = meta.height ?? 0;
+      if (w <= ANALYSIS_MAX_PX && h <= ANALYSIS_MAX_PX) return buffer;
+      return sharp(buffer)
         .resize(ANALYSIS_MAX_PX, ANALYSIS_MAX_PX, { fit: "inside", withoutEnlargement: true })
         .jpeg({ quality: 85 })
         .toBuffer();
-    }
+    })();
+    analysisBuffer = await Promise.race([
+      resizePromise,
+      new Promise<Buffer>((_, reject) => setTimeout(() => reject(new Error("resize_timeout")), SHARP_TIMEOUT_MS)),
+    ]);
   } catch {
     analysisBuffer = buffer;
   }

@@ -88,19 +88,24 @@ export function AnalyzeClient() {
 
   const onDragLeave = () => setDragOver(false);
 
+  const REQUEST_TIMEOUT_MS = 125_000; // 125s — slightly above server OpenAI timeout so user sees server error when possible
+
   const runAnalysis = async () => {
     if (!file) return;
     setError(null);
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const form = new FormData();
       form.set("chart", file);
-      const res = await fetch("/api/analyze", { method: "POST", body: form });
+      const res = await fetch("/api/analyze", { method: "POST", body: form, signal: controller.signal });
+      clearTimeout(timeoutId);
       let data: { error?: string; code?: string; creditsRemaining?: number; dailyLimit?: number | null };
       try {
         data = await res.json();
       } catch {
-        setError(res.status === 401 ? "Please log in again." : "Server error. Try again.");
+        setError(res.status === 401 ? "Please log in again." : res.status === 504 ? "Analysis timed out. Try a smaller image or try again." : "Server error. Try again.");
         return;
       }
       if (!res.ok) {
@@ -119,6 +124,11 @@ export function AnalyzeClient() {
       setRemainingToday(data.creditsRemaining ?? null);
       setDailyLimit(data.dailyLimit ?? null);
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === "AbortError") {
+        setError("Request timed out. Try a smaller image or try again.");
+        return;
+      }
       const message = err instanceof Error ? err.message : "Network or server error.";
       setError(message.includes("fetch") ? "Network error. Check your connection and try again." : message);
     } finally {
