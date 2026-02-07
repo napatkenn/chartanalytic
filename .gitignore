@@ -38,3 +38,6 @@ uploads/
 
 # Social agent screenshots
 social-agent/output/
+
+.vercel
+.env*.local
