@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { authOptions } from "@/lib/auth";
 import {
   getActiveSubscription,
@@ -12,6 +13,8 @@ import { prisma } from "@/lib/db";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+/** Resize for OpenAI vision to reduce payload and avoid timeout (max long edge). */
+const ANALYSIS_MAX_PX = 1536;
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -79,17 +82,36 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(arrayBuffer);
   const imageUrl = await saveUpload(buffer, file.type);
 
-  const base64 = buffer.toString("base64");
-  const dataUrl = `data:${file.type};base64,${base64}`;
+  // Resize for analysis to speed up OpenAI and avoid timeout (keep original for storage)
+  let analysisBuffer: Buffer;
+  try {
+    const meta = await sharp(buffer).metadata();
+    const w = meta.width ?? 0;
+    const h = meta.height ?? 0;
+    if (w <= ANALYSIS_MAX_PX && h <= ANALYSIS_MAX_PX) {
+      analysisBuffer = buffer;
+    } else {
+      analysisBuffer = await sharp(buffer)
+        .resize(ANALYSIS_MAX_PX, ANALYSIS_MAX_PX, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer();
+    }
+  } catch {
+    analysisBuffer = buffer;
+  }
+  const base64 = analysisBuffer.toString("base64");
+  const mime = analysisBuffer === buffer ? file.type : "image/jpeg";
+  const dataUrl = `data:${mime};base64,${base64}`;
 
   let analysisResult;
   try {
     analysisResult = await analyzeChartImage(dataUrl);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Analysis failed";
+    const isTimeout = message.includes("timed out");
     return NextResponse.json(
-      { error: `AI analysis failed: ${message}` },
-      { status: 502 }
+      { error: isTimeout ? message : `AI analysis failed: ${message}` },
+      { status: isTimeout ? 504 : 502 }
     );
   }
 

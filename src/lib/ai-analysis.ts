@@ -43,34 +43,51 @@ Return a structured analysis in the following JSON format only (no markdown, no 
 
 Focus on clarity and actionable levels. Use exact numbers from the chart when visible. Keep reasoning concise and trader-focused.`;
 
+const OPENAI_TIMEOUT_MS = 90_000; // 90s — avoid Vercel 300s function timeout
+
 export async function analyzeChartImage(imageBase64: string): Promise<AnalysisResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+
   const openai = new OpenAI({ apiKey });
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    max_tokens: 800,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+  try {
+    const response = await openai.chat.completions.create(
       {
-        role: "user",
-        content: [
+        model: "gpt-4o",
+        max_tokens: 800,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
           {
-            type: "image_url",
-            image_url: {
-              url: imageBase64.startsWith("data:") ? imageBase64 : `data:image/png;base64,${imageBase64}`,
-            },
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageBase64.startsWith("data:") ? imageBase64 : `data:image/png;base64,${imageBase64}`,
+                },
+              },
+            ],
           },
         ],
       },
-    ],
-  });
+      { signal: controller.signal }
+    );
+    clearTimeout(timeoutId);
 
-  const raw = response.choices[0]?.message?.content?.trim();
-  if (!raw) throw new Error("Empty AI response");
+    const raw = response.choices[0]?.message?.content?.trim();
+    if (!raw) throw new Error("Empty AI response");
 
-  const parsed = JSON.parse(raw) as unknown;
-  const validated = AnalysisSchema.parse(parsed);
-  return validated as AnalysisResult;
+    const parsed = JSON.parse(raw) as unknown;
+    const validated = AnalysisSchema.parse(parsed);
+    return validated as AnalysisResult;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Analysis timed out. Try a smaller image or try again.");
+    }
+    throw err;
+  }
 }

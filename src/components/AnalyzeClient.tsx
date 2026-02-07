@@ -96,8 +96,18 @@ export function AnalyzeClient() {
       const form = new FormData();
       form.set("chart", file);
       const res = await fetch("/api/analyze", { method: "POST", body: form });
-      const data = await res.json();
+      let data: { error?: string; code?: string; creditsRemaining?: number; dailyLimit?: number | null };
+      try {
+        data = await res.json();
+      } catch {
+        setError(res.status === 401 ? "Please log in again." : "Server error. Try again.");
+        return;
+      }
       if (!res.ok) {
+        if (res.status === 401) {
+          setError("Session expired. Please log in again.");
+          return;
+        }
         if (res.status === 402 && (data.code === "SUBSCRIPTION_REQUIRED" || data.code === "CREDITS_REQUIRED")) {
           window.location.href = "/subscribe";
           return;
@@ -106,8 +116,11 @@ export function AnalyzeClient() {
         return;
       }
       setResult(data as ApiResponse);
-      setRemainingToday(data.creditsRemaining);
-      setDailyLimit(data.dailyLimit);
+      setRemainingToday(data.creditsRemaining ?? null);
+      setDailyLimit(data.dailyLimit ?? null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Network or server error.";
+      setError(message.includes("fetch") ? "Network error. Check your connection and try again." : message);
     } finally {
       setLoading(false);
     }
