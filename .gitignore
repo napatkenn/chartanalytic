@@ -35,3 +35,6 @@ Thumbs.db
 
 # Uploads (user content)
 uploads/
+
+# Social agent screenshots
+social-agent/output/
