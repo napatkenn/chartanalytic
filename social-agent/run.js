@@ -27,7 +27,7 @@ try {
 
 const { getSchedulesForHour, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
-const { analyzeImage, formatCaption } = require("./analyze");
+const { analyzeImage, formatCaption, pickHashtags, HASHTAG_POOL } = require("./analyze");
 const { composeExportImage } = require("./compose-export");
 const postX = require("./post-x");
 
@@ -44,7 +44,8 @@ async function runOne(schedule, options = {}) {
   let caption;
   let imagePathForPost = outPath;
   if (skipAnalyze) {
-    caption = `${schedule.name} ${schedule.timeframe} chart\n#trading #forex #chart`;
+    const hashtags = pickHashtags(HASHTAG_POOL, 3, 5);
+    caption = `${schedule.name} ${schedule.timeframe} chart\n${hashtags}`;
   } else {
     console.log(`[${schedule.id}] Analyzing...`);
     const analysis = await analyzeImage(outPath);
