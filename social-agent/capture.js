@@ -184,15 +184,9 @@ async function captureChart(url, outputPath, options = {}) {
       }
     }
 
-    const el = await page.$(chartSelector).catch(() => null);
-    const clip = el
-      ? await el.boundingBox()
-      : { x: 0, y: 100, width: viewportWidth, height: Math.min(900, viewportHeight - 180) };
-
     await page.screenshot({
       path: outputPath,
       type: "png",
-      clip: clip || undefined,
     });
 
     const stat = await fs.stat(outputPath);

@@ -102,7 +102,8 @@ async function analyzeImageOpenAI(imagePath) {
 
   const raw = response.choices[0]?.message?.content?.trim();
   if (!raw) throw new Error("Empty AI response");
-  const parsed = JSON.parse(raw);
+  const jsonStr = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+  const parsed = JSON.parse(jsonStr);
   return parsed;
 }
 
