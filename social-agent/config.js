@@ -55,7 +55,7 @@ const SCHEDULES = [
     symbol: "FX:USDJPY",
     timeframe: "1H",
     interval: INTERVAL.H1,
-    postTimeUTC: 18,
+    postTimeUTC: 17,
     url: chartUrl("FX:USDJPY", INTERVAL.H1),
   },
   {

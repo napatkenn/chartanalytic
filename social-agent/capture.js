@@ -184,6 +184,12 @@ async function captureChart(url, outputPath, options = {}) {
       }
     }
 
+    // Enter full screen (Shift+F) before programmatic screenshot so chart fills viewport
+    await page.keyboard.down("Shift");
+    await page.keyboard.press("f");
+    await page.keyboard.up("Shift");
+    await new Promise((r) => setTimeout(r, 500));
+
     await page.screenshot({
       path: outputPath,
       type: "png",
