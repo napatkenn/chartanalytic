@@ -148,6 +148,12 @@ async function captureChart(url, outputPath, options = {}) {
     }
     await new Promise((r) => setTimeout(r, waitMs));
 
+    // On Render, extra 3s for chart to fully render before Ctrl+Alt+S (slower env)
+    if (process.env.RENDER) {
+      console.log("[capture] Render: extra 3s for chart to settle before screenshot...");
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+
     if (useScreenshotShortcut) {
       const before = new Set(fsSync.readdirSync(absOutDir));
       await triggerScreenshotShortcut(page);
