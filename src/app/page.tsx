@@ -28,6 +28,12 @@ export default async function HomePage() {
         {/* Hero — BoomFi/dashboard style */}
         <section className="relative border-b border-gray-200 bg-gray-50 px-4 py-16 sm:py-24">
           <div className="container mx-auto max-w-4xl text-center">
+            <div className="mb-6 flex justify-center">
+              <div className="flex items-center gap-3">
+                <Image src="/images/logo.svg" alt="" width={40} height={40} className="shrink-0 opacity-90" aria-hidden />
+                <span className="text-2xl font-bold tracking-tight text-gray-900">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
+              </div>
+            </div>
             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-600">
               AI chart analysis
             </p>

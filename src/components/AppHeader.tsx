@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function AppHeader({
   session,
@@ -24,16 +25,15 @@ export function AppHeader({
             isLight ? "text-gray-900" : "text-white"
           }`}
         >
-          <span
-            className={`flex h-8 w-8 items-center justify-center rounded-lg text-sm font-bold shadow-lg ${
-              isLight
-                ? "bg-emerald-500 text-white shadow-emerald-500/20"
-                : "bg-gradient-to-br from-cyan-500 to-cyan-700 text-white shadow-cyan-500/20"
-            }`}
-          >
-            C
-          </span>
-          ChartAnalytic
+          <Image
+            src="/images/logo.svg"
+            alt=""
+            width={28}
+            height={28}
+            className={`shrink-0 ${isLight ? "opacity-90" : "invert opacity-90"}`}
+            aria-hidden
+          />
+          <span className="whitespace-nowrap">{"ChartAnalytic".slice(0, 5)}<span className="text-emerald-500 m-0 p-0">{"ChartAnalytic"[5]}</span>{"ChartAnalytic".slice(6)}</span>
         </Link>
 
         <nav className="flex items-center gap-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
@@ -66,9 +67,8 @@ export function AppSidebar({
       {/* Logo */}
       <div className="flex h-14 items-center gap-2 border-b border-gray-200 px-4">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight text-black">
-            Chart<span className="text-emerald-500">A</span>nalytic
-          </span>
+          <Image src="/images/logo.svg" alt="" width={24} height={24} className="shrink-0 opacity-90" aria-hidden />
+          <span className="text-xl font-bold tracking-tight text-black">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
         </Link>
       </div>
 
