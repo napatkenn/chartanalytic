@@ -115,9 +115,10 @@ async function composeExportImage(chartImagePath, analysis, outPath, options = {
   const pairLabel = options.pairLabel || "";
 
   const html = buildExportHtml(chartDataUrl, analysis, pairLabel);
+  const { getChromeLaunchOptions } = require("./puppeteer-render");
   const browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    ...getChromeLaunchOptions(),
   });
 
   try {

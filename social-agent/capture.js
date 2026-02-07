@@ -98,6 +98,7 @@ async function triggerScreenshotShortcut(page) {
 
 async function captureChart(url, outputPath, options = {}) {
   const puppeteer = require("puppeteer");
+  const { getChromeLaunchOptions } = require("./puppeteer-render");
   const {
     viewportWidth = 1920,
     viewportHeight = 1080,
@@ -110,7 +111,7 @@ async function captureChart(url, outputPath, options = {}) {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    ...getChromeLaunchOptions(),
   });
 
   try {
