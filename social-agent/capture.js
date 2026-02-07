@@ -100,8 +100,8 @@ async function captureChart(url, outputPath, options = {}) {
   const puppeteer = require("puppeteer");
   const { getChromeLaunchOptions } = require("./puppeteer-render");
   const {
-    viewportWidth = 1920,
-    viewportHeight = 1080,
+    viewportWidth = 1152,
+    viewportHeight = 648,
     waitMs = 3000,
     /** Schedule object { timeframe, interval, url } — if set, we wait for this timeframe to be visible */
     schedule = null,
@@ -152,6 +152,21 @@ async function captureChart(url, outputPath, options = {}) {
     if (process.env.RENDER) {
       console.log("[capture] Render: extra 3s for chart to settle before screenshot...");
       await new Promise((r) => setTimeout(r, 3000));
+    }
+
+    // Slight viewport nudge + scroll to encourage TradingView to sync price axis with chart (no extra delay)
+    const chartEl = await page.$(chartSelector).catch(() => null);
+    if (chartEl) {
+      await page.setViewport({ width: viewportWidth + 1, height: viewportHeight, deviceScaleFactor: 2 });
+      await page.setViewport({ width: viewportWidth, height: viewportHeight, deviceScaleFactor: 2 });
+      const box = await chartEl.boundingBox();
+      if (box) {
+        const centerX = box.x + box.width / 2;
+        const centerY = box.y + box.height / 2;
+        await page.mouse.move(centerX, centerY);
+        await page.mouse.wheel({ deltaY: 40 });
+        await new Promise((r) => setTimeout(r, 100));
+      }
     }
 
     if (useScreenshotShortcut) {
