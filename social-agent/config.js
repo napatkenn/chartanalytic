@@ -2,7 +2,6 @@
  * Chart posting schedule (times in UTC).
  * TradingView chart URL uses: symbol (e.g. FX:EURUSD, OANDA:XAUUSD) and interval in minutes.
  * Each entry runs at the given hour; use system cron or Task Scheduler to invoke run.js.
- * @see https://github.com/gitroomhq/postiz-app
  */
 
 const INTERVAL = {

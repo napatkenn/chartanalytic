@@ -1,0 +1,179 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { toPng } from "html-to-image";
+import { formatDistanceToNow } from "date-fns";
+import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
+import type { MarketBias } from "@/lib/analysis-types";
+
+type Props = {
+  analysis: {
+    marketBias: string;
+    confidence: number | null;
+    createdAt: string;
+    support: string[];
+    resistance: string[];
+    entry: string | null;
+    takeProfit: string | null;
+    takeProfit2: string | null;
+    stopLoss: string | null;
+    stopLoss2: string | null;
+    riskReward: string | null;
+    reasoning: string;
+  };
+  chartImageUrl: string;
+};
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">
+      {children}
+    </span>
+  );
+}
+
+function LevelCell({
+  label,
+  value,
+  variant = "neutral",
+}: {
+  label: string;
+  value: string | null;
+  variant?: "green" | "red" | "neutral";
+}) {
+  const valueClass =
+    variant === "green"
+      ? "text-emerald-700 font-medium"
+      : variant === "red"
+        ? "text-red-700 font-medium"
+        : "text-gray-900 font-medium";
+  return (
+    <div className="min-w-0">
+      <Label>{label}</Label>
+      <span className={`font-mono text-sm ${valueClass}`}>{value ?? "—"}</span>
+    </div>
+  );
+}
+
+export function AnalysisDetailContent({ analysis, chartImageUrl }: Props) {
+  const captureRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const bias = analysis.marketBias as MarketBias;
+  const badgeClass =
+    bias === "bullish"
+      ? "bg-emerald-100 text-emerald-800"
+      : bias === "bearish"
+        ? "bg-red-100 text-red-800"
+        : "bg-amber-100 text-amber-800";
+
+  const handleDownload = async () => {
+    if (!captureRef.current) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await toPng(captureRef.current, {
+        quality: 1,
+        pixelRatio: 2,
+        cacheBust: true,
+        includeQueryParams: true,
+      });
+      const link = document.createElement("a");
+      link.download = `chart-analysis-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <button
+        type="button"
+        onClick={handleDownload}
+        disabled={downloading}
+        className="rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-white shadow transition hover:bg-emerald-600 disabled:opacity-60"
+      >
+        {downloading ? "Creating image…" : "Download as image"}
+      </button>
+
+      {/* Single block: header + chart + analysis (captured for export) */}
+      <div
+        ref={captureRef}
+        className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+      >
+        {/* Header */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-100 bg-gray-50/80 px-6 py-4">
+          <span className={`rounded-full px-3 py-1 text-sm font-medium ${badgeClass}`}>
+            {MARKET_BIAS_LABELS[bias] ?? analysis.marketBias}
+          </span>
+          <span className="text-sm text-gray-500">
+            {formatDistanceToNow(new Date(analysis.createdAt), { addSuffix: true })}
+          </span>
+          {analysis.confidence != null && (
+            <span className="rounded-md border border-gray-200 bg-white px-2.5 py-0.5 font-mono text-sm font-medium text-gray-700">
+              {analysis.confidence}% confidence
+            </span>
+          )}
+        </div>
+
+        {/* Chart */}
+        <div className="overflow-hidden border-b border-gray-200 bg-gray-50">
+          <img
+            src={chartImageUrl}
+            alt="Chart"
+            className="w-full object-contain"
+            crossOrigin="anonymous"
+          />
+        </div>
+
+        {/* Analysis: one clean section */}
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 rounded-xl border border-gray-200 bg-gray-50/50 px-5 py-4">
+            <div>
+              <Label>Support</Label>
+              <ul className="font-mono text-sm text-gray-900">
+                {analysis.support?.length
+                  ? analysis.support.map((s, i) => <li key={i}>{s}</li>)
+                  : "—"}
+              </ul>
+            </div>
+            <div>
+              <Label>Resistance</Label>
+              <ul className="font-mono text-sm text-gray-900">
+                {analysis.resistance?.length
+                  ? analysis.resistance.map((r, i) => <li key={i}>{r}</li>)
+                  : "—"}
+              </ul>
+            </div>
+            <div>
+              <Label>Risk:Reward</Label>
+              <span className="font-mono text-sm font-medium text-gray-900">
+                {analysis.riskReward ?? "—"}
+              </span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 bg-emerald-50/60 px-5 py-4 border-b border-gray-100">
+              <LevelCell label="Entry" value={analysis.entry} variant="green" />
+              <LevelCell label="Take profit" value={analysis.takeProfit} variant="green" />
+              <LevelCell label="Take profit 2" value={analysis.takeProfit2} variant="green" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 bg-red-50/40 px-5 py-4">
+              <LevelCell label="Stop loss" value={analysis.stopLoss} variant="red" />
+              <LevelCell label="Stop loss 2" value={analysis.stopLoss2} variant="red" />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-5 py-4">
+            <Label>Reasoning</Label>
+            <p className="text-sm leading-relaxed text-gray-700 mt-1">{analysis.reasoning}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

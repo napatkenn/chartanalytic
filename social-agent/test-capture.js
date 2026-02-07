@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Test TradingView chart capture only (no analyze, no Postiz).
+ * Test TradingView chart capture only (no analyze, no post to X).
  * Usage: node social-agent/test-capture.js [eurusd|gbpusd|xauusd|usdjpy|audusd]
  * Default: eurusd. Output: social-agent/output/
  */

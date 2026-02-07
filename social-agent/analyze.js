@@ -101,19 +101,44 @@ async function analyzeImage(imagePath) {
   return analyzeImageOpenAI(imagePath);
 }
 
+/** 3–5 forex hashtags for X */
+const FOREX_HASHTAGS = ["#forex", "#trading", "#fx", "#technicalanalysis", "#forexsignals"];
+
+/**
+ * Generate a short, high-impact forex post for X (Twitter).
+ * Format: symbol | timeframe, bias (%), one key level line, targets, hashtags.
+ */
 function formatCaption(schedule, analysis) {
-  const bias = (analysis.marketBias || "").toUpperCase();
+  const symbol = (schedule.name || analysis.symbol || "FX").replace(/\s*\/\s*/g, "/").trim();
+  const tf = (schedule.timeframe || analysis.timeframe || "").toUpperCase();
+  const pair = `${symbol} | ${tf}`;
+
+  const biasLabel = (analysis.marketBias || "range").charAt(0).toUpperCase() + (analysis.marketBias || "").slice(1);
   const confidence = analysis.confidence != null ? ` (${analysis.confidence}%)` : "";
-  const lines = [
-    `${schedule.name} ${schedule.timeframe} • Bias: ${bias}${confidence}`,
-    analysis.entry ? `Entry: ${analysis.entry}` : null,
-    analysis.takeProfit ? `TP: ${analysis.takeProfit}` : null,
-    analysis.takeProfit2 ? `TP2: ${analysis.takeProfit2}` : null,
-    analysis.stopLoss ? `SL: ${analysis.stopLoss}` : null,
-    analysis.stopLoss2 ? `SL2: ${analysis.stopLoss2}` : null,
-    analysis.reasoning ? `\n${analysis.reasoning}` : null,
-  ].filter(Boolean);
-  return lines.join("\n");
+  const biasLine = `Bias: ${biasLabel}${confidence}`;
+
+  let levelLine = "";
+  const res = analysis.resistance && analysis.resistance[0];
+  const sup = analysis.support && analysis.support[0];
+  if (analysis.marketBias === "bearish" && res) {
+    levelLine = `Below ${res} = sellers in control`;
+  } else if (analysis.marketBias === "bullish" && sup) {
+    levelLine = `Above ${sup} = buyers in control`;
+  } else if (analysis.marketBias === "range" && sup && res) {
+    levelLine = `Between ${sup}–${res} = range`;
+  } else if (res) {
+    levelLine = `Key level: ${res}`;
+  } else if (sup) {
+    levelLine = `Key level: ${sup}`;
+  }
+
+  const targets = [analysis.takeProfit, analysis.takeProfit2].filter(Boolean);
+  const targetsLine = targets.length ? `Targets: ${targets.join(" → ")}` : "";
+
+  const lines = [pair, biasLine, levelLine, targetsLine].filter(Boolean);
+  const body = lines.join("\n");
+  const hashtags = FOREX_HASHTAGS.slice(0, 5).join(" ");
+  return body + (hashtags ? "\n\n" + hashtags : "");
 }
 
 module.exports = { analyzeImage, analyzeImageViaApp, analyzeImageOpenAI, formatCaption };

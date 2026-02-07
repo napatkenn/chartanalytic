@@ -5,8 +5,9 @@
  *   node run.js              Run all schedules due at current UTC hour
  *   node run.js eurusd       Run only EUR/USD schedule
  *   node run.js --no-analyze Run without AI analysis (post chart only with symbol/tf caption)
+ *   node run.js --dry-run    Capture + analyze + format post text; print only, do not post to X
  *
- * Loads .env from project root. Requires: puppeteer, OPENAI_API_KEY (if analyzing), Postiz env vars.
+ * Loads .env from project root. Requires: puppeteer, OPENAI_API_KEY or Chart Analytic app (if analyzing), X API credentials (unless --dry-run).
  */
 
 const path = require("path");
@@ -27,12 +28,12 @@ try {
 const { getSchedulesForHour, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
 const { analyzeImage, formatCaption } = require("./analyze");
-const { postChart } = require("./postiz");
+const postX = require("./post-x");
 
 const OUT_DIR = path.join(__dirname, "output");
 
 async function runOne(schedule, options = {}) {
-  const { skipAnalyze = false } = options;
+  const { skipAnalyze = false, dryRun = false } = options;
   const outPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}.png`);
 
   console.log(`[${schedule.id}] Capturing ${schedule.name} ${schedule.timeframe}...`);
@@ -48,8 +49,18 @@ async function runOne(schedule, options = {}) {
     caption = formatCaption(schedule, analysis);
   }
 
-  console.log(`[${schedule.id}] Posting to Postiz...`);
-  const result = await postChart(outPath, caption);
+  if (dryRun) {
+    console.log(`[${schedule.id}] --- Post text (dry-run, not posted) ---`);
+    console.log(caption);
+    console.log(`[${schedule.id}] --- Image: ${outPath} ---`);
+    return { dryRun: true, caption, imagePath: outPath };
+  }
+
+  if (!postX.isConfigured()) {
+    throw new Error("X API not configured. Set X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET (from developer.x.com).");
+  }
+  console.log(`[${schedule.id}] Posting to X...`);
+  const result = await postX.postChart(outPath, caption);
   console.log(`[${schedule.id}] Done.`, result);
   return result;
 }
@@ -57,6 +68,7 @@ async function runOne(schedule, options = {}) {
 async function main() {
   const args = process.argv.slice(2);
   const skipAnalyze = args.includes("--no-analyze");
+  const dryRun = args.includes("--dry-run");
   const filtered = args.filter((a) => !a.startsWith("--"));
 
   let schedules;
@@ -80,7 +92,7 @@ async function main() {
 
   for (const schedule of schedules) {
     try {
-      await runOne(schedule, { skipAnalyze });
+      await runOne(schedule, { skipAnalyze, dryRun });
     } catch (err) {
       console.error(`[${schedule.id}] Error:`, err.message);
       process.exitCode = 1;
