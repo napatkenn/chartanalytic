@@ -75,11 +75,24 @@ async function runOne(schedule, options = {}) {
   return result;
 }
 
+/** Sleep ms (for cron jitter). */
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const skipAnalyze = args.includes("--no-analyze");
   const dryRun = args.includes("--dry-run");
   const filtered = args.filter((a) => !a.startsWith("--"));
+
+  // Cron jitter: when run by cron (no schedule id), wait 1–10 min so runs aren't all at exact :00
+  if (filtered.length === 0) {
+    const jitterMin = 1 + Math.floor(Math.random() * 10);
+    const jitterMs = jitterMin * 60 * 1000;
+    console.log(`Cron jitter: waiting ${jitterMin} min before running...`);
+    await sleep(jitterMs);
+  }
 
   let schedules;
   if (filtered.length) {
