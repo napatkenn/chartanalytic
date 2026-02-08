@@ -130,8 +130,8 @@ export async function updateBoomFiSubscriptionPlan(
 }
 
 /**
- * Convert a BoomFi pay link to lite checkout URL with pre-filled name and email
- * so the customer doesn't have to enter them. See: https://docs.boomfi.xyz/docs/creating-pay-links
+ * Build BoomFi checkout URL (original, no /lite) with optional pre-filled name and email.
+ * Strips /lite from incoming URLs so all plans use https://pay.boomfi.xyz/{id}?email=...&name=...
  */
 export function getBoomFiLiteCheckoutUrl(
   payLinkUrl: string,
@@ -144,5 +144,5 @@ export function getBoomFiLiteCheckoutUrl(
   const params = new URLSearchParams();
   if (customer.email) params.set("email", customer.email);
   params.set("name", customer.name?.trim() || customer.email || "Customer");
-  return `https://pay.boomfi.xyz/lite/${pathId}?${params.toString()}`;
+  return `https://pay.boomfi.xyz/${pathId}?${params.toString()}`;
 }
