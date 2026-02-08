@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AnalyzeClient } from "@/components/AnalyzeClient";
 import { Disclaimer } from "@/components/Disclaimer";
+
+export const metadata: Metadata = {
+  title: "Analyze — ChartAnalytic",
+  description: "Upload a chart for AI analysis. Get market bias, support and resistance, entry, TP, SL, and reasoning.",
+};
 
 export default async function AnalyzePage() {
   const session = await getServerSession(authOptions);

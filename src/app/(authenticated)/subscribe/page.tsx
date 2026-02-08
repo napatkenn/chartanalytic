@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import { getServerSession } from "next-auth";
@@ -8,6 +9,11 @@ import { SubscribeButton } from "@/components/SubscribeButton";
 import { UpgradeButton } from "@/components/UpgradeButton";
 import { CancelSubscriptionButton } from "@/components/CancelSubscriptionButton";
 import { Disclaimer } from "@/components/Disclaimer";
+
+export const metadata: Metadata = {
+  title: "Subscribe — ChartAnalytic",
+  description: "Choose your ChartAnalytic plan. Subscribe with crypto (BoomFi) for AI chart analysis and daily upload limits.",
+};
 
 export default async function SubscribePage() {
   const session = await getServerSession(authOptions);

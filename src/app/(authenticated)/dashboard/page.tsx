@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -8,6 +9,11 @@ import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
 import { Disclaimer } from "@/components/Disclaimer";
+
+export const metadata: Metadata = {
+  title: "Dashboard — ChartAnalytic",
+  description: "Your ChartAnalytic dashboard. View recent analyses, upload new charts, and manage your subscription.",
+};
 
 export const dynamic = "force-dynamic";
 

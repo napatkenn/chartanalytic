@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -6,6 +7,11 @@ import { prisma } from "@/lib/db";
 import { getUploadUrl } from "@/lib/storage";
 import { AnalysisDetailContent } from "@/components/AnalysisDetailContent";
 import { Disclaimer } from "@/components/Disclaimer";
+
+export const metadata: Metadata = {
+  title: "Analysis — ChartAnalytic",
+  description: "View your AI chart analysis: market bias, support and resistance, entry, TP, SL, and reasoning.",
+};
 
 export default async function AnalysisDetailPage({
   params,
