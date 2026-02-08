@@ -80,3 +80,20 @@ You start with **5 credits**; each analysis uses 1 credit. Past analyses appear 
 - **Upload fails** — Use PNG/JPEG/WebP and a file under 10MB; stay logged in.
 
 Once the app is running with a valid DB and `OPENAI_API_KEY`, you can upload a chart screenshot and receive the full chart analytics details as described above.
+
+---
+
+## Automated tests (plan upgrade)
+
+To run unit and API tests for plan upgrade and related logic:
+
+```bash
+npm run test
+```
+
+This runs Vitest and includes:
+
+- **Plans** (`src/lib/plans.test.ts`): `isUpgrade` (only higher tiers count as upgrade), `getProratedUpgradeAmount` (prorated upgrade amount for remaining period).
+- **Upgrade route** (`src/app/api/boomfi/subscription/upgrade/route.test.ts`): auth required, invalid tier, no subscription, missing BoomFi link, same/lower tier rejected, demo mode updates tier without BoomFi, 503 when plan not configured, success path (BoomFi update then local tier update), 502 when BoomFi fails, upgrade to advanced.
+
+Use `npm run test:watch` to run tests in watch mode.

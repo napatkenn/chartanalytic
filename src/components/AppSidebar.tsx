@@ -185,6 +185,14 @@ export function AppSidebar({
                 Upgrade plan
               </Link>
             )}
+            {hasSubscription && usage && usage.remaining === 0 && (
+              <Link
+                href="/subscribe"
+                className="mt-2 block w-full rounded-md border border-emerald-500 py-1.5 text-center text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+              >
+                Upgrade for more
+              </Link>
+            )}
           </div>
         )}
       </div>

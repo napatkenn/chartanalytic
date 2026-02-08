@@ -3,8 +3,9 @@ import Image from "next/image";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getActiveSubscription, getSubscriptionRecord } from "@/lib/subscription";
-import { PLANS, type PlanTier } from "@/lib/plans";
+import { PLANS, PLAN_TIERS, TIER_ORDER, isUpgrade, type PlanTier } from "@/lib/plans";
 import { SubscribeButton } from "@/components/SubscribeButton";
+import { UpgradeButton } from "@/components/UpgradeButton";
 import { CancelSubscriptionButton } from "@/components/CancelSubscriptionButton";
 import { Disclaimer } from "@/components/Disclaimer";
 
@@ -17,6 +18,12 @@ export default async function SubscribePage() {
     getSubscriptionRecord(session.user.id),
   ]);
   const canCancel = record?.status === "active";
+
+  // When subscribed: show only current plan and higher-tier plans (hide lower-tier cards).
+  const currentTier = subscription?.planTier as PlanTier | undefined;
+  const tiersToShow: PlanTier[] = currentTier
+    ? (PLAN_TIERS.filter((t) => TIER_ORDER[t] >= TIER_ORDER[currentTier]) as PlanTier[])
+    : ([...PLAN_TIERS] as PlanTier[]);
 
   return (
     <>
@@ -34,9 +41,11 @@ export default async function SubscribePage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {(["starter", "active", "advanced"] as PlanTier[]).map((tier) => {
+        <div className={`grid gap-6 ${tiersToShow.length === 1 ? "max-w-md mx-auto" : tiersToShow.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"}`}>
+          {tiersToShow.map((tier) => {
             const plan = PLANS[tier];
+            const isCurrentPlan = currentTier === tier;
+            const canUpgrade = currentTier && isUpgrade(currentTier, tier);
             return (
               <div
                 key={tier}
@@ -68,7 +77,13 @@ export default async function SubscribePage() {
                   ))}
                 </ul>
                 <div className="mt-auto pt-4">
-                  <SubscribeButton tier={tier} disabled={!!subscription} />
+                  {!subscription && <SubscribeButton tier={tier} disabled={false} />}
+                  {subscription && isCurrentPlan && (
+                    <button type="button" disabled className="w-full rounded-xl border border-gray-300 bg-gray-50 py-3 text-center text-sm font-medium text-gray-500">
+                      Current plan
+                    </button>
+                  )}
+                  {subscription && canUpgrade && <UpgradeButton tier={tier} />}
                 </div>
               </div>
             );
@@ -87,7 +102,7 @@ export default async function SubscribePage() {
               </p>
             )}
             <p className="mt-2 text-sm text-emerald-700">
-              To change plan: cancel this subscription (access until period end), then choose a new plan below. You can also cancel on BoomFi from your payment confirmation or customer portal.
+              Use the buttons above to upgrade to a higher plan. The current billing period and all future periods will be charged at the new plan — no payment or action required now. You can use the app at the new tier instantly. To downgrade: cancel this subscription (access until period end), then choose a new plan. You can also cancel on BoomFi from your payment confirmation or customer portal.
             </p>
             {canCancel && !record?.cancelAtPeriodEnd && (
               <div className="mt-4">

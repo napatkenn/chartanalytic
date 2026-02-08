@@ -102,6 +102,34 @@ export async function cancelBoomFiSubscription(boomfiSubscriptionId: string): Pr
 }
 
 /**
+ * Update a BoomFi subscription to a new plan. Effective immediately: the current billing period
+ * and all future billing periods are charged at the new plan. Use this for upgrades so the
+ * customer is on the new tier now and at every renewal.
+ * @see https://docs.boomfi.xyz/reference/subscriptions
+ */
+export async function updateBoomFiSubscriptionPlan(
+  boomfiSubscriptionId: string,
+  newPlanId: string
+): Promise<void> {
+  const apiKey = process.env.BOOMFI_API_KEY;
+  if (!apiKey) throw new Error("BOOMFI_API_KEY is not set");
+
+  const res = await fetch(`${BOOMFI_BASE}/v1/subscriptions/${encodeURIComponent(boomfiSubscriptionId)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ plan_id: newPlanId }),
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `BoomFi subscription update failed: ${res.status}`);
+  }
+}
+
+/**
  * Convert a BoomFi pay link to lite checkout URL with pre-filled name and email
  * so the customer doesn't have to enter them. See: https://docs.boomfi.xyz/docs/creating-pay-links
  */

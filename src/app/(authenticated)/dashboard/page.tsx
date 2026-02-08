@@ -112,6 +112,15 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {subscription && remainingToday?.remaining === 0 && (
+          <div className="mx-6 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="font-medium text-emerald-800">You&apos;ve used all your daily uploads. Upgrade your plan for more.</p>
+            <Link href="/subscribe" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
+              Upgrade plan
+            </Link>
+          </div>
+        )}
+
         {/* Two main panels */}
         <section className="grid gap-6 px-6 pb-6 lg:grid-cols-2">
           {/* AI Analysis Summary - vertical bar chart, same light theme as page */}

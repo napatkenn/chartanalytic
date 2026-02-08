@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { AnalysisResultCard } from "./AnalysisResultCard";
 import type { AnalysisResult } from "@/lib/analysis-types";
 
@@ -27,6 +28,7 @@ export function AnalyzeClient() {
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
   const [dailyLimit, setDailyLimit] = useState<number | null>(null);
@@ -93,6 +95,7 @@ export function AnalyzeClient() {
   const runAnalysis = async () => {
     if (!file) return;
     setError(null);
+    setErrorCode(null);
     setLoading(true);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -117,6 +120,7 @@ export function AnalyzeClient() {
           window.location.href = "/subscribe";
           return;
         }
+        setErrorCode(data.code ?? null);
         setError(data.error ?? "Analysis failed.");
         return;
       }
@@ -208,7 +212,16 @@ export function AnalyzeClient() {
             )}
           </button>
         </div>
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && (
+          <div className="mt-3">
+            <p className="text-sm text-red-600">{error}</p>
+            {errorCode === "DAILY_LIMIT" && (
+              <Link href="/subscribe" className="mt-2 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-700">
+                Upgrade plan for more daily uploads →
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Results – always light themed */}

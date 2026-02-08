@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { addCredits } from "@/lib/credits";
-import { setBoomFiSubscription } from "@/lib/subscription";
+import { setBoomFiSubscription, updateSubscriptionTier } from "@/lib/subscription";
 import { prisma } from "@/lib/db";
 import { PLANS } from "@/lib/plans";
 import type { PlanTier } from "@/lib/plans";
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     event?: string;
     status?: string;
     customer?: { reference?: string };
-    metadata?: { userId?: string; credits?: string; planTier?: string };
+    metadata?: { userId?: string; credits?: string; planTier?: string; upgrade?: string };
     subscription_id?: string;
     subscription?: { id?: string };
   };
@@ -81,6 +81,13 @@ export async function POST(req: Request) {
 
   const planTier = payload.metadata?.planTier as PlanTier | undefined;
   const boomfiSubId = payload.subscription_id ?? payload.subscription?.id ?? undefined;
+  const isUpgradePayment = payload.metadata?.upgrade === "true";
+
+  // Upgrade: one-time payment to upgrade tier; update existing subscription only (do not create new or reset period).
+  if (isUpgradePayment && planTier && ["starter", "active", "advanced"].includes(planTier)) {
+    await updateSubscriptionTier(userId, planTier as PlanTier);
+    return NextResponse.json({ received: true });
+  }
 
   if (planTier && ["starter", "active", "advanced"].includes(planTier)) {
     const plan = PLANS[planTier];
