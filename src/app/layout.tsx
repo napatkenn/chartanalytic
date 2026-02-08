@@ -5,22 +5,27 @@ import { SessionProvider } from "@/components/SessionProvider";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import "./globals.css";
 
-// Ensure app is server-rendered so Vercel never serves static 404 for any route
-export const dynamic = "force-dynamic";
-
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
 });
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "ChartAnalytic — AI Trading Chart Analysis",
   description:
     "Upload charts with multi-timeframe support for AI-powered bias, levels, entry, TP, SL, and reasoning. Not financial advice.",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default function RootLayout({

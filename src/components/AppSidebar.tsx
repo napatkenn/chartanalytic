@@ -49,6 +49,9 @@ export function AppSidebar({
   usage,
   collapsed = false,
   onToggleCollapse,
+  mobileOpen = false,
+  onMobileClose,
+  isMobile = false,
 }: {
   user: { name?: string | null; email?: string | null };
   credits: number;
@@ -57,6 +60,9 @@ export function AppSidebar({
   usage: { remaining: number; limit: number } | null;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+  isMobile?: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,66 +88,93 @@ export function AppSidebar({
     ? `${usage.remaining} / ${usage.limit} left today`
     : `${credits} credit${credits !== 1 ? "s" : ""}`;
 
-  const sidebarWidth = collapsed ? "w-16" : "w-56";
-  const logoRowPadding = collapsed ? "px-2 justify-center" : "px-4";
+  const sidebarWidth = collapsed && !isMobile ? "w-16" : "w-56";
+  const logoRowPadding = collapsed && !isMobile ? "px-2 justify-center" : "px-4";
+  const showExpanded = !collapsed || isMobile;
 
   return (
-    <aside
-      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-gray-200 bg-gray-50 transition-[width] duration-200 ${sidebarWidth}`}
-    >
-      {/* Collapse toggle — circle button at ~35% down the sidebar */}
-      {onToggleCollapse && (
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="absolute right-0 top-[35%] z-50 flex h-9 w-9 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 hover:shadow-lg"
-          aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
-        >
-          {collapsed ? (
-            <ChevronRightIcon className="h-4 w-4" />
-          ) : (
-            <ChevronLeftIcon className="h-4 w-4" />
-          )}
-        </button>
+    <>
+      {isMobile && mobileOpen && onMobileClose && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          aria-hidden
+          onClick={onMobileClose}
+        />
       )}
+      <aside
+        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-gray-50 transition-all duration-200 ${
+          isMobile
+            ? `w-72 shadow-xl ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`
+            : `${sidebarWidth}`
+        }`}
+        style={isMobile ? { width: "18rem" } : undefined}
+      >
+        {/* Collapse toggle — only on desktop */}
+        {onToggleCollapse && !isMobile && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="absolute right-0 top-[35%] z-50 flex h-9 w-9 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 hover:shadow-lg"
+            aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRightIcon className="h-4 w-4" />
+            ) : (
+              <ChevronLeftIcon className="h-4 w-4" />
+            )}
+          </button>
+        )}
+        {isMobile && onMobileClose && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-700 md:hidden"
+            aria-label="Close menu"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
 
-      {/* Logo */}
-      <div className={`flex h-14 items-center gap-2 border-b border-gray-200 ${logoRowPadding}`}>
-        <Link href="/dashboard" className={`flex min-w-0 items-center gap-2 ${collapsed ? "" : "flex-1"}`}>
-          <Logo size={24} />
-          {!collapsed && (
-            <span className="truncate text-xl font-bold tracking-tight text-black">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
-          )}
-        </Link>
-      </div>
+        {/* Logo */}
+        <div className={`flex h-14 items-center gap-2 border-b border-gray-200 ${logoRowPadding} ${isMobile ? "px-4" : ""}`}>
+          <Link href="/dashboard" onClick={isMobile ? onMobileClose : undefined} className={`flex min-w-0 items-center gap-2 ${!showExpanded ? "" : "flex-1"}`}>
+            <Logo size={24} />
+            {showExpanded && (
+              <span className="truncate text-xl font-bold tracking-tight text-black">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
+            )}
+          </Link>
+        </div>
 
-      {/* Nav */}
-      <nav className={`flex-1 space-y-0.5 p-3 ${collapsed ? "flex flex-col items-center" : ""}`}>
-        {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href === "/dashboard" && pathname === "/");
-          return (
-            <Link
-              key={href}
-              href={href}
-              title={collapsed ? label : undefined}
-              className={`flex items-center rounded-lg py-2.5 text-sm font-medium transition ${
-                collapsed ? "w-10 justify-center px-0" : "gap-3 px-3"
-              } ${
-                isActive
-                  ? "bg-emerald-500 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              <Icon className="h-5 w-5 shrink-0" />
-              {!collapsed && label}
-            </Link>
-          );
-        })}
-      </nav>
+        {/* Nav */}
+        <nav className={`flex-1 space-y-0.5 p-3 ${!showExpanded ? "flex flex-col items-center" : ""}`}>
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href || (href === "/dashboard" && pathname === "/");
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={!showExpanded ? label : undefined}
+                onClick={isMobile ? onMobileClose : undefined}
+                className={`flex min-h-[44px] items-center rounded-lg py-2.5 text-sm font-medium transition ${
+                  !showExpanded ? "w-10 justify-center px-0" : "gap-3 px-3"
+                } ${
+                  isActive
+                    ? "bg-emerald-500 text-white"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {showExpanded && label}
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* Credits / usage — compact when collapsed */}
-      <div className={`border-t border-gray-200 p-3 ${collapsed ? "px-2" : ""}`}>
-        {collapsed ? (
+      {/* Credits / usage — compact when collapsed (desktop only) */}
+      <div className={`border-t border-gray-200 p-3 ${!showExpanded ? "px-2" : ""}`}>
+        {!showExpanded ? (
           <div className="flex flex-col items-center gap-1" title={label}>
             <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
               {current}
@@ -198,8 +231,8 @@ export function AppSidebar({
       </div>
 
       {/* User block */}
-      <div className={`relative border-t border-gray-200 p-3 ${collapsed ? "px-2" : ""}`} ref={menuRef}>
-        <div className={`flex items-center rounded-lg px-3 py-2 ${collapsed ? "justify-center px-0" : "gap-3"}`}>
+      <div className={`relative border-t border-gray-200 p-3 ${!showExpanded ? "px-2" : ""}`} ref={menuRef}>
+        <div className={`flex items-center rounded-lg px-3 py-2 ${!showExpanded ? "justify-center px-0" : "gap-3"}`}>
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
@@ -208,14 +241,14 @@ export function AppSidebar({
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
               {displayName.charAt(0).toUpperCase()}
             </div>
-            {!collapsed && (
+            {showExpanded && (
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-gray-900">{displayName}</p>
                 <p className="truncate text-xs text-gray-500">{displaySub}</p>
               </div>
             )}
           </button>
-          {!collapsed && (
+          {showExpanded && (
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
@@ -229,17 +262,17 @@ export function AppSidebar({
           )}
         </div>
         {menuOpen && (
-          <div className={`absolute bottom-14 rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${collapsed ? "left-2 right-2" : "left-3 right-3"}`}>
+          <div className={`absolute bottom-14 rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${!showExpanded ? "left-2 right-2" : "left-3 right-3"}`}>
             <Link
               href="/subscribe"
               className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-              onClick={() => setMenuOpen(false)}
+              onClick={() => { setMenuOpen(false); isMobile && onMobileClose?.(); }}
             >
               Manage subscription
             </Link>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => { isMobile && onMobileClose?.(); signOut({ callbackUrl: "/" }); }}
               className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               Sign out
@@ -248,5 +281,6 @@ export function AppSidebar({
         )}
       </div>
     </aside>
+    </>
   );
 }

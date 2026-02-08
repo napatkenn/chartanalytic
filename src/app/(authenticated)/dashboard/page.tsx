@@ -50,11 +50,11 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6">
+      <header className="flex h-14 min-h-[3.5rem] items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
         <p className="text-sm text-gray-500">Home</p>
         <Link
           href="/analyze"
-          className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+          className="flex min-h-[44px] items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 active:bg-emerald-700"
         >
           + Create
         </Link>
@@ -62,15 +62,15 @@ export default async function DashboardPage() {
 
       <main className="min-h-screen bg-gray-50">
         {/* Welcome banner */}
-        <section className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-8 text-white">
-          <h1 className="text-2xl font-bold">Welcome back, {displayName}</h1>
-          <p className="mt-1 text-emerald-100">
+        <section className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-6 text-white sm:px-6 sm:py-8">
+          <h1 className="text-xl font-bold sm:text-2xl">Welcome back, {displayName}</h1>
+          <p className="mt-1 text-sm text-emerald-100 sm:text-base">
             Ready to analyze your charts with AI-powered insights?
           </p>
         </section>
 
         {/* Key metrics - 4 cards */}
-        <section className="px-6 py-6">
+        <section className="px-4 py-4 sm:px-6 sm:py-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <CardIcon icon="upload" />
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
         </section>
 
         {!subscription && credits === 0 && (
-          <div className="mx-6 mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:mx-6">
             <p className="font-medium text-amber-800">No credits left. Get more or subscribe to analyze charts.</p>
             <Link href="/subscribe" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
               View plans & subscribe
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
         )}
 
         {subscription && remainingToday?.remaining === 0 && (
-          <div className="mx-6 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="mx-4 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:mx-6">
             <p className="font-medium text-emerald-800">You&apos;ve used all your daily uploads. Upgrade your plan for more.</p>
             <Link href="/subscribe" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
               Upgrade plan
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
         )}
 
         {/* Two main panels */}
-        <section className="grid gap-6 px-6 pb-6 lg:grid-cols-2">
+        <section className="grid gap-4 px-4 pb-6 sm:gap-6 sm:px-6 lg:grid-cols-2">
           {/* AI Analysis Summary - vertical bar chart, same light theme as page */}
           <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2">
@@ -247,13 +247,13 @@ export default async function DashboardPage() {
         </section>
 
         {/* Quick Actions */}
-        <section className="px-6 pb-8">
+        <section className="px-4 pb-8 sm:px-6">
           <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
           <p className="mt-1 text-sm text-gray-500">Common tasks you might want to perform</p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
             <Link
               href="/analyze"
-              className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
                 <CardIcon icon="upload" />
@@ -262,16 +262,16 @@ export default async function DashboardPage() {
             </Link>
             <Link
               href="/subscribe"
-              className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
                 <CardIcon icon="chat" />
               </div>
               <span className="font-medium text-gray-900">Plans & Support</span>
             </Link>
             <Link
               href="#recent"
-              className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
                 <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
         </section>
 
         {/* Footer disclaimer */}
-        <footer className="border-t border-gray-200 bg-white px-6 py-4">
+        <footer className="border-t border-gray-200 bg-white px-4 py-4 sm:px-6">
           <Disclaimer />
         </footer>
       </main>
