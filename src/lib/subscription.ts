@@ -83,6 +83,19 @@ export async function getSubscriptionRecord(userId: string) {
   });
 }
 
+/** Update only the plan tier of the user's active subscription (e.g. after upgrade). Keeps currentPeriodEnd and boomfiSubscriptionId. */
+export async function updateSubscriptionTier(userId: string, newTier: PlanTier): Promise<void> {
+  const existing = await prisma.subscription.findFirst({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!existing || existing.status !== "active") return;
+  await prisma.subscription.update({
+    where: { id: existing.id },
+    data: { planTier: newTier },
+  });
+}
+
 /** Mark subscription as canceled (after BoomFi cancel or webhook). */
 export async function setSubscriptionCanceled(
   userId: string,
