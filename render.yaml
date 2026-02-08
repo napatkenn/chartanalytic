@@ -18,7 +18,7 @@ services:
     runtime: node
     plan: starter
     # Run at 07:00, 12:00, 15:00, 17:00, 20:00 UTC; run.js adds 1–5 min jitter before starting
-    schedule: "0 7,12,15,17,20 * * *"
+    schedule: "0 7,12,15,17,20 * * 1-5"
     # Install Chrome into project dir (absolute path required by puppeteer install) so it's in the uploaded build
     buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
     startCommand: node social-agent/run.js
