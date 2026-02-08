@@ -153,6 +153,11 @@ async function captureChart(url, outputPath, options = {}) {
       console.log("[capture] Render: extra 3s for chart to settle before screenshot...");
       await new Promise((r) => setTimeout(r, 3000));
     }
+    // Enter full screen (Shift+F) before programmatic screenshot so chart fills viewport
+    await page.keyboard.down("Shift");
+    await page.keyboard.press("f");
+    await page.keyboard.up("Shift");
+    await new Promise((r) => setTimeout(r, 500));
 
     // Slight viewport nudge + scroll to encourage TradingView to sync price axis with chart (no extra delay)
     const chartEl = await page.$(chartSelector).catch(() => null);
@@ -165,7 +170,7 @@ async function captureChart(url, outputPath, options = {}) {
         const centerY = box.y + box.height / 2;
         await page.mouse.move(centerX, centerY);
         await page.mouse.wheel({ deltaY: 40 });
-        await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
 
@@ -184,11 +189,6 @@ async function captureChart(url, outputPath, options = {}) {
       }
     }
 
-    // Enter full screen (Shift+F) before programmatic screenshot so chart fills viewport
-    await page.keyboard.down("Shift");
-    await page.keyboard.press("f");
-    await page.keyboard.up("Shift");
-    await new Promise((r) => setTimeout(r, 500));
 
     await page.screenshot({
       path: outputPath,
