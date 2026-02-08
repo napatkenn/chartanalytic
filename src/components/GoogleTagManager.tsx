@@ -1,8 +1,13 @@
+import Script from "next/script";
+
 const GTM_ID = "GTM-NMCH787X";
 
-export function GoogleTagManagerHead() {
+/** GTM script: inject as high as possible. Next.js Script with beforeInteractive ensures it's in initial HTML so Google detects it. */
+export function GoogleTagManagerScript() {
   return (
-    <script
+    <Script
+      id="gtm-init"
+      strategy="beforeInteractive"
       dangerouslySetInnerHTML={{
         __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
