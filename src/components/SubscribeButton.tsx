@@ -27,7 +27,10 @@ export function SubscribeButton({ tier, disabled }: { tier: PlanTier; disabled?:
       } else if (!res.ok) {
         data = { error: `Request failed (${res.status})` };
       }
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        trackEvent("boomfi_checkout_entered", { tier, plan: tier, destination: "boomfi" });
+        window.location.href = data.url;
+      }
       else {
         const msg = data.hint ? `${data.error}\n\n${data.hint}` : (data.error ?? "Could not start checkout.");
         alert(msg);

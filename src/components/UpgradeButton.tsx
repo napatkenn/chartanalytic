@@ -30,6 +30,7 @@ export function UpgradeButton({ tier }: { tier: PlanTier }) {
         data = { error: `Request failed (${res.status})` };
       }
       if (data.url) {
+        trackEvent("boomfi_checkout_entered", { tier, plan: tier, destination: "boomfi" });
         window.location.href = data.url;
         return;
       }
