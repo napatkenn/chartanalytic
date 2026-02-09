@@ -5,6 +5,7 @@ import { getActiveSubscription, getRemainingUploadsToday } from "@/lib/subscript
 import { getOrCreateCredits } from "@/lib/credits";
 import { prisma } from "@/lib/db";
 import { DashboardShell } from "@/components/DashboardShell";
+import { SubscriptionSuccessTracker } from "@/components/SubscriptionSuccessTracker";
 import { TrialOfferPopup } from "@/components/TrialOfferPopup";
 import { OutOfCreditsModal } from "@/components/OutOfCreditsModal";
 
@@ -38,6 +39,7 @@ export default async function AuthenticatedLayout({
 
   return (
     <div className="min-h-screen bg-white">
+      <SubscriptionSuccessTracker />
       <TrialOfferPopup />
       <OutOfCreditsModal show={showOutOfCreditsLock} />
       <DashboardShell

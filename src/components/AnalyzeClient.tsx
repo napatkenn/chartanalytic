@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { AnalysisResultCard } from "./AnalysisResultCard";
 import type { AnalysisResult } from "@/lib/analysis-types";
+import { trackEvent } from "@/lib/gtag";
 
 interface ApiResponse {
   analysis: {
@@ -94,6 +95,7 @@ export function AnalyzeClient() {
 
   const runAnalysis = async () => {
     if (!file) return;
+    trackEvent("analysis_started");
     setError(null);
     setErrorCode(null);
     setLoading(true);
@@ -125,6 +127,7 @@ export function AnalyzeClient() {
         return;
       }
       setResult(data as ApiResponse);
+      trackEvent("analysis_complete");
       setRemainingToday(data.creditsRemaining ?? null);
       setDailyLimit(data.dailyLimit ?? null);
     } catch (err) {

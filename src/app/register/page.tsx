@@ -6,6 +6,7 @@ import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { AppHeader } from "@/components/AppHeader";
 import { Disclaimer } from "@/components/Disclaimer";
+import { trackEvent } from "@/lib/gtag";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
@@ -29,6 +30,7 @@ export default function RegisterPage() {
       setError(data.error ?? "Registration failed.");
       return;
     }
+    trackEvent("sign_up");
     await signIn("credentials", {
       email,
       password,

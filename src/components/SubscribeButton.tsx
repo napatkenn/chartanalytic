@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import type { PlanTier } from "@/lib/plans";
+import { trackEvent } from "@/lib/gtag";
 
 export function SubscribeButton({ tier, disabled }: { tier: PlanTier; disabled?: boolean }) {
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
+    trackEvent("begin_checkout", { tier, plan: tier });
     setLoading(true);
     try {
       const res = await fetch("/api/boomfi/subscribe", {

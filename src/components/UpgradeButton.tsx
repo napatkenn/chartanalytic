@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { PlanTier } from "@/lib/plans";
 import { PLANS } from "@/lib/plans";
+import { trackEvent } from "@/lib/gtag";
 
 export function UpgradeButton({ tier }: { tier: PlanTier }) {
   const [loading, setLoading] = useState(false);
   const plan = PLANS[tier];
 
   async function handleClick() {
+    trackEvent("begin_checkout", { tier, plan: tier });
     setLoading(true);
     try {
       const res = await fetch("/api/boomfi/subscription/upgrade", {

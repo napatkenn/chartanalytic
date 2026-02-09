@@ -1,13 +1,23 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { PLANS, type PlanTier } from "@/lib/plans";
 import { SubscribeButton } from "@/components/SubscribeButton";
+import { trackEvent } from "@/lib/gtag";
 
 export function OutOfCreditsModal({
   show,
 }: {
   show: boolean;
 }) {
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!show || firedRef.current) return;
+    firedRef.current = true;
+    trackEvent("credits_exhausted");
+  }, [show]);
+
   if (!show) return null;
 
   return (

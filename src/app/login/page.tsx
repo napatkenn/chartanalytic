@@ -7,6 +7,7 @@ import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { Disclaimer } from "@/components/Disclaimer";
+import { trackEvent } from "@/lib/gtag";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -32,7 +33,10 @@ function LoginForm() {
       setError(isConfigError ? "Server auth is misconfigured. Set NEXTAUTH_SECRET and NEXTAUTH_URL on Vercel." : "Invalid email or password.");
       return;
     }
-    if (res?.url) window.location.href = res.url;
+    if (res?.url) {
+      trackEvent("login");
+      window.location.href = res.url;
+    }
   }
 
   return (

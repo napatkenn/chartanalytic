@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/gtag";
 
 export function CancelSubscriptionButton() {
   const [showModal, setShowModal] = useState(false);
@@ -17,6 +18,7 @@ export function CancelSubscriptionButton() {
         alert(data.error ?? "Failed to cancel");
         return;
       }
+      trackEvent("cancel_subscription_click");
       setShowModal(false);
       router.refresh();
     } finally {

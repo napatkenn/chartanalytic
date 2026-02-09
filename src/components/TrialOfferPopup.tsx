@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/gtag";
 
 export function TrialOfferPopup() {
   const [show, setShow] = useState(false);
@@ -27,6 +28,7 @@ export function TrialOfferPopup() {
         alert(data.error ?? "Something went wrong");
         return;
       }
+      trackEvent("trial_activate");
       setShow(false);
       router.refresh();
     } finally {

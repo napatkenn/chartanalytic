@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Logo } from "@/components/Logo";
 import { AppHeader } from "@/components/AppHeader";
 import { ScrollingStrip } from "@/components/ScrollingStrip";
+import { StartTrialLink } from "@/components/StartTrialLink";
 import { Disclaimer } from "@/components/Disclaimer";
 import { PLANS, type PlanTier } from "@/lib/plans";
 
@@ -35,12 +36,13 @@ export default function HomePage() {
               entry, TP, SL, risk-reward, and concise reasoning — in seconds.
             </p>
             <div className="mt-8 sm:mt-10">
-              <Link
+              <StartTrialLink
                 href="/register"
+                source="hero"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-emerald-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-600 active:bg-emerald-700"
               >
                 Start free trial
-              </Link>
+              </StartTrialLink>
             </div>
             <div className="mt-12 flex justify-center">
               <Image
@@ -98,8 +100,9 @@ export default function HomePage() {
                         </li>
                       ))}
                     </ul>
-                    <Link
+                    <StartTrialLink
                       href="/register"
+                      source="pricing"
                       className={`mt-6 flex min-h-[48px] w-full items-center justify-center rounded-xl py-3 text-center text-sm font-semibold transition ${
                         plan.popular
                           ? "bg-emerald-500 text-white hover:bg-emerald-600 active:bg-emerald-700"
@@ -107,7 +110,7 @@ export default function HomePage() {
                       }`}
                     >
                       Start free trial
-                    </Link>
+                    </StartTrialLink>
                   </div>
                 );
               })}
