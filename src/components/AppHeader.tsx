@@ -43,7 +43,7 @@ export function AppHeader({
           : "border-white/[0.06] bg-surface-950/80"
       }`}
     >
-      <div className="container mx-auto flex h-14 min-h-[3.5rem] max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:min-h-[4rem]">
+      <div className="container relative mx-auto flex h-14 min-h-[3.5rem] max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:min-h-[4rem]">
         <Link
           href="/"
           className={`flex min-w-0 shrink-0 items-center gap-2 text-lg font-bold tracking-tight ${
@@ -54,7 +54,37 @@ export function AppHeader({
           <span className="hidden whitespace-nowrap sm:inline">{"ChartAnalytic".slice(0, 5)}<span className="text-emerald-500 m-0 p-0">{"ChartAnalytic"[5]}</span>{"ChartAnalytic".slice(6)}</span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — center: section links (when logged out) */}
+        {!session && (
+          <nav className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-1 md:flex">
+            <Link
+              href="/#features"
+              className={`rounded-lg px-3 py-2.5 text-sm font-medium transition min-h-[44px] flex items-center ${
+                isLight ? "text-gray-600 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+              }`}
+            >
+              Features
+            </Link>
+            <Link
+              href="/#pricing"
+              className={`rounded-lg px-3 py-2.5 text-sm font-medium transition min-h-[44px] flex items-center ${
+                isLight ? "text-gray-600 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+              }`}
+            >
+              Pricing
+            </Link>
+            <Link
+              href="/#how-it-works"
+              className={`rounded-lg px-3 py-2.5 text-sm font-medium transition min-h-[44px] flex items-center ${
+                isLight ? "text-gray-600 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+              }`}
+            >
+              How it Works
+            </Link>
+          </nav>
+        )}
+
+        {/* Desktop nav — right: auth or app links */}
         <nav className="hidden items-center gap-1 md:flex">
           {session ? (
             <>
@@ -189,6 +219,33 @@ export function AppHeader({
               </>
             ) : (
               <>
+                <Link
+                  href="/#features"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-xl px-4 py-3.5 text-base font-medium ${
+                    isLight ? "text-gray-700 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  Features
+                </Link>
+                <Link
+                  href="/#pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-xl px-4 py-3.5 text-base font-medium ${
+                    isLight ? "text-gray-700 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/#how-it-works"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-xl px-4 py-3.5 text-base font-medium ${
+                    isLight ? "text-gray-700 hover:bg-gray-100" : "text-gray-300 hover:bg-white/5"
+                  }`}
+                >
+                  How it Works
+                </Link>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}

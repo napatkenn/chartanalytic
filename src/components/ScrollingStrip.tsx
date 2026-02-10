@@ -8,7 +8,6 @@ const PILLS = [
   "multi-timeframe support",
   "No credit card",
   "Free trial",
-  "BoomFi crypto",
 ];
 
 export function ScrollingStrip() {
