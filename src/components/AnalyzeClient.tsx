@@ -235,20 +235,9 @@ export function AnalyzeClient() {
             </>
           )}
         </div>
-        {/* Analysis settings */}
-        <div className="mt-5 border-t border-gray-100 pt-5">
-          <button
-            type="button"
-            onClick={() => setSettingsOpen((o) => !o)}
-            className="flex w-full items-center justify-between text-left text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            <span className="flex items-center gap-2">
-              <SettingsIcon className="h-4 w-4 text-gray-500" />
-              Analysis settings
-            </span>
-            <span className="text-gray-400" aria-hidden>{settingsOpen ? "▼" : "▶"}</span>
-          </button>
-          {settingsOpen && (
+        {/* Analysis settings panel (toggled by Settings button beside Analyze chart) */}
+        {settingsOpen && (
+          <div className="mt-5 border-t border-gray-100 pt-5">
             <div className={`mt-4 space-y-4 rounded-xl border border-gray-200 p-4 ${!isSubscribed ? "bg-gray-50/80" : "bg-gray-50/50"}`}>
               {!isSubscribed && (
                 <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
@@ -359,8 +348,8 @@ export function AnalyzeClient() {
                 </label>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -376,6 +365,15 @@ export function AnalyzeClient() {
             ) : (
               "Analyze chart"
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+            title={settingsOpen ? "Hide settings" : "Analysis settings"}
+          >
+            <SettingsIcon className="h-5 w-5 text-gray-500" />
+            Settings
           </button>
         </div>
         {error && (
