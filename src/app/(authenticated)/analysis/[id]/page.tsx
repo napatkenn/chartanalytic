@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getUploadUrl } from "@/lib/storage";
 import { AnalysisDetailContent } from "@/components/AnalysisDetailContent";
+import { TradeOutcomeForm } from "@/components/TradeOutcomeForm";
 import { Disclaimer } from "@/components/Disclaimer";
 
 export const metadata: Metadata = {
@@ -57,6 +58,17 @@ export default async function AnalysisDetailPage({
           }}
           chartImageUrl={getUploadUrl(analysis.imageUrl)}
         />
+        <div className="mt-6">
+          <TradeOutcomeForm
+            analysisId={analysis.id}
+            initialOutcome={
+              analysis.tradeOutcome === "win" || analysis.tradeOutcome === "lose"
+                ? analysis.tradeOutcome
+                : null
+            }
+            initialAmount={analysis.tradeAmount ?? null}
+          />
+        </div>
         <Disclaimer />
       </main>
     </>

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { AnalysisResultCard } from "./AnalysisResultCard";
+import { TradeOutcomeForm } from "./TradeOutcomeForm";
 import type { AnalysisResult, AnalysisOptions } from "@/lib/analysis-types";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@/lib/analysis-types";
 import { trackEvent } from "@/lib/gtag";
@@ -503,12 +504,25 @@ export function AnalyzeClient() {
           Results
         </h2>
         {result ? (
-          <AnalysisResultCard
-            analysis={result.analysis}
-            creditsRemaining={result.creditsRemaining}
-            dailyLimit={result.dailyLimit ?? undefined}
-            analysisOptions={optionsUsed}
-          />
+          <>
+            <AnalysisResultCard
+              analysis={result.analysis}
+              creditsRemaining={result.creditsRemaining}
+              dailyLimit={result.dailyLimit ?? undefined}
+              analysisOptions={optionsUsed}
+            />
+            <div className="mt-6">
+              <TradeOutcomeForm
+                analysisId={result.analysis.id}
+                initialOutcome={
+                  result.analysis.tradeOutcome === "win" || result.analysis.tradeOutcome === "lose"
+                    ? result.analysis.tradeOutcome
+                    : null
+                }
+                initialAmount={result.analysis.tradeAmount ?? null}
+              />
+            </div>
+          </>
         ) : (
           <div className="min-h-[280px] overflow-y-auto rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Chart Upload Guidelines</p>

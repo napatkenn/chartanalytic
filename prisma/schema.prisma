@@ -95,6 +95,8 @@ model ChartAnalysis {
   reasoning         String
   invalidationLevel String?  // subscriber-only: price that invalidates setup
   keyRisk           String?  // subscriber-only: key risk or caveat
+  tradeOutcome      String?  // "win" | "lose" when user records result
+  tradeAmount       Float?   // optional P&L or amount
   rawResponse       String?  // full AI response for audit
   createdAt         DateTime @default(now())
 

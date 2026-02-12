@@ -9,6 +9,7 @@ import { useRef, useState, useEffect } from "react";
 const navItems = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
   { href: "/analyze", label: "Analyze", icon: LinkIcon },
+  { href: "/history", label: "History", icon: ClockIcon },
 ] as const;
 
 function HomeIcon({ className }: { className?: string }) {
@@ -22,6 +23,13 @@ function LinkIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v10.5a2.25 2.25 0 0 0 2.25 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25V3.75M3.75 12h16.5M12 3.75v16.5" />
+    </svg>
+  );
+}
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }

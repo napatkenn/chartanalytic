@@ -23,6 +23,10 @@ export interface AnalysisResult {
   invalidationLevel?: string;
   /** Subscriber-only: key risk or caveat */
   keyRisk?: string;
+  /** User-recorded: did this trade win or lose */
+  tradeOutcome?: "win" | "lose";
+  /** User-recorded: P&L or amount */
+  tradeAmount?: number;
 }
 
 export const MARKET_BIAS_LABELS: Record<MarketBias, string> = {

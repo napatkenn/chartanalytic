@@ -215,7 +215,7 @@ export default async function DashboardPage() {
                 </svg>
                 <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
               </div>
-              <Link href="#recent" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+              <Link href="/history" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
                 View All History
               </Link>
             </div>
@@ -276,7 +276,7 @@ export default async function DashboardPage() {
               <span className="font-medium text-gray-900">Plans & Support</span>
             </Link>
             <Link
-              href="#recent"
+              href="/history"
               className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
             >
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
