@@ -6,13 +6,20 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: (props: { className?: string }) => React.ReactElement;
+  comingSoon?: boolean;
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
   { href: "/analyze", label: "Analyze", icon: LinkIcon },
   { href: "/history", label: "History", icon: ClockIcon },
   { href: "/portfolio", label: "Portfolio", icon: ChartIcon, comingSoon: true },
   { href: "/support", label: "Support", icon: SupportIcon },
-] as const;
+];
 
 function HomeIcon({ className }: { className?: string }) {
   return (
