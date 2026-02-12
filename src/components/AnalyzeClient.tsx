@@ -254,18 +254,44 @@ export function AnalyzeClient() {
             </>
           )}
         </div>
-        {/* Analysis settings panel (toggled by Settings button beside Analyze chart) */}
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={runAnalysis}
+            disabled={!file || loading}
+            className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Analyzing…
+              </span>
+            ) : (
+              "Analyze chart"
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+            title={settingsOpen ? "Hide settings" : "Analysis settings"}
+          >
+            <SettingsIcon className="h-5 w-5 text-gray-500" />
+            Settings
+          </button>
+        </div>
+        {/* Analysis settings panel: pops down below the buttons when open */}
         {settingsOpen && (
-          <div className="mt-5 border-t border-gray-100 pt-5">
-            <div className={`mt-4 space-y-4 rounded-xl border border-gray-200 p-4 ${!isSubscribed ? "bg-gray-50/80" : "bg-gray-50/50"}`}>
-              {!isSubscribed && (
-                <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
-                  You can view these options.{" "}
-                  <Link href="/subscribe" className="font-medium text-amber-700 underline hover:text-amber-800">
-                    Upgrade your plan to customize
-                  </Link>
-                </p>
-              )}
+          <div className={`mt-4 rounded-xl border border-gray-200 p-4 ${!isSubscribed ? "bg-gray-50/80" : "bg-gray-50/50"}`}>
+            {!isSubscribed && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800 mb-4">
+                You can view these options.{" "}
+                <Link href="/subscribe" className="font-medium text-amber-700 underline hover:text-amber-800">
+                  Upgrade your plan to customize
+                </Link>
+              </p>
+            )}
+            <div className="space-y-4">
               <div>
                 <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Take profit targets</p>
                 <div className="flex flex-wrap items-center gap-2">
@@ -459,32 +485,6 @@ export function AnalyzeClient() {
             </div>
           </div>
         )}
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={runAnalysis}
-            disabled={!file || loading}
-            className="rounded-xl bg-emerald-500 px-5 py-2.5 font-semibold text-white shadow transition hover:bg-emerald-600 disabled:opacity-50"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Analyzing…
-              </span>
-            ) : (
-              "Analyze chart"
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-            title={settingsOpen ? "Hide settings" : "Analysis settings"}
-          >
-            <SettingsIcon className="h-5 w-5 text-gray-500" />
-            Settings
-          </button>
-        </div>
         {error && (
           <div className="mt-3">
             <p className="text-sm text-red-600">{error}</p>
