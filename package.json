@@ -26,6 +26,7 @@
     "html-to-image": "^1.11.13",
     "next": "^14.2.19",
     "next-auth": "^4.24.10",
+    "nodemailer": "^6.10.1",
     "openai": "^4.73.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -36,6 +37,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.9.0",
+    "@types/nodemailer": "^7.0.9",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
