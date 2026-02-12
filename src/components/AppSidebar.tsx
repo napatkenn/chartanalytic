@@ -10,7 +10,7 @@ const navItems = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
   { href: "/analyze", label: "Analyze", icon: LinkIcon },
   { href: "/history", label: "History", icon: ClockIcon },
-  { href: "/portfolio", label: "Portfolio", icon: ChartIcon },
+  { href: "/portfolio", label: "Portfolio", icon: ChartIcon, comingSoon: true },
   { href: "/support", label: "Support", icon: SupportIcon },
 ] as const;
 
@@ -173,8 +173,30 @@ export function AppSidebar({
 
         {/* Nav */}
         <nav className={`flex-1 space-y-0.5 p-3 ${!showExpanded ? "flex flex-col items-center" : ""}`}>
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || (href === "/dashboard" && pathname === "/");
+          {navItems.map((item) => {
+            const { href, label, icon: Icon, comingSoon } = item;
+            const isActive = !comingSoon && (pathname === href || (href === "/dashboard" && pathname === "/"));
+            if (comingSoon) {
+              return (
+                <div
+                  key={href}
+                  title={!showExpanded ? `${label} — Coming soon` : undefined}
+                  className={`flex min-h-[44px] cursor-not-allowed items-center rounded-lg py-2.5 text-sm font-medium text-gray-400 ${
+                    !showExpanded ? "w-10 justify-center px-0" : "gap-3 px-3"
+                  }`}
+                >
+                  <Icon className="h-5 w-5 shrink-0 opacity-70" />
+                  {showExpanded && (
+                    <>
+                      <span className="flex-1">{label}</span>
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-normal text-gray-500">
+                        Coming soon
+                      </span>
+                    </>
+                  )}
+                </div>
+              );
+            }
             return (
               <Link
                 key={href}
