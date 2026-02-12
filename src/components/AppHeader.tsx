@@ -50,7 +50,7 @@ export function AppHeader({
             isLight ? "text-gray-900" : "text-white"
           }`}
         >
-          <Logo size={28} invert={!isLight} />
+          <Logo size={28} invert={!isLight} priority />
           <span className="hidden whitespace-nowrap sm:inline">{"ChartAnalytic".slice(0, 5)}<span className="text-emerald-500 m-0 p-0">{"ChartAnalytic"[5]}</span>{"ChartAnalytic".slice(6)}</span>
         </Link>
 

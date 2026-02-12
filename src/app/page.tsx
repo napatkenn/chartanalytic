@@ -60,6 +60,8 @@ export default function HomePage() {
                 height={420}
                 className="w-full max-w-lg rounded-xl border border-gray-200 shadow-lg"
                 sizes="(max-width: 640px) 100vw, 560px"
+                priority
+                fetchPriority="high"
               />
             </div>
           </div>

@@ -6,10 +6,12 @@ export function Logo({
   size = 24,
   className = "",
   invert = false,
+  priority = false,
 }: {
   size?: number;
   className?: string;
   invert?: boolean;
+  priority?: boolean;
 }) {
   return (
     <Image
@@ -19,6 +21,7 @@ export function Logo({
       height={size}
       className={`shrink-0 opacity-90 ${invert ? "invert" : ""} ${className}`.trim()}
       aria-hidden
+      priority={priority}
     />
   );
 }

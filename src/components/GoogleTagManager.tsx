@@ -2,12 +2,12 @@ import Script from "next/script";
 
 const GTM_ID = "GTM-NMCH787X";
 
-/** GTM script: inject as high as possible. Next.js Script with beforeInteractive ensures it's in initial HTML so Google detects it. */
+/** GTM script: use afterInteractive so it doesn't block FCP/LCP; improves mobile Core Web Vitals. */
 export function GoogleTagManagerScript() {
   return (
     <Script
       id="gtm-init"
-      strategy="beforeInteractive"
+      strategy="afterInteractive"
       dangerouslySetInnerHTML={{
         __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
