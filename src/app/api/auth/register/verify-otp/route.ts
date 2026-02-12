@@ -12,21 +12,34 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { email, otp } = VerifyOtpSchema.parse(body);
 
-    const baseUrl =
-      process.env.OTP_SERVICE_URL ?? "https://otp-service-beta.vercel.app";
-    const res = await fetch(`${baseUrl}/api/otp/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp }),
-    });
+    const baseUrl = process.env.OTP_SERVICE_URL ?? "https://otp-service-beta.vercel.app";
+    const bypassOtp = baseUrl.toLowerCase() === "skip" || baseUrl === "";
 
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      const message =
-        typeof data.message === "string"
-          ? data.message
-          : "Invalid or expired code.";
-      return NextResponse.json({ error: message }, { status: 400 });
+    if (!bypassOtp) {
+      let res: Response;
+      try {
+        res = await fetch(`${baseUrl}/api/otp/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp }),
+        });
+      } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        console.error("[verify-otp] OTP service unreachable", msg);
+        return NextResponse.json(
+          { error: "Verification service is unreachable. Try again later." },
+          { status: 502 }
+        );
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message =
+          typeof data.message === "string"
+            ? data.message
+            : "Invalid or expired code.";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
     }
 
     const pending = await prisma.pendingRegistration.findUnique({

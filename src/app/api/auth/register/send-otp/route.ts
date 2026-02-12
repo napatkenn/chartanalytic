@@ -24,26 +24,45 @@ export async function POST(req: Request) {
       );
     }
 
-    const baseUrl =
-      process.env.OTP_SERVICE_URL ?? "https://otp-service-beta.vercel.app";
-    const res = await fetch(`${baseUrl}/api/otp/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        type: "numeric",
-        organization: "ChartAnalytic",
-        subject: "Verify your email",
-      }),
-    });
+    const baseUrl = process.env.OTP_SERVICE_URL ?? "https://otp-service-beta.vercel.app";
+    const bypassOtp = baseUrl.toLowerCase() === "skip" || baseUrl === "";
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("[send-otp] OTP service error", res.status, errText);
-      return NextResponse.json(
-        { error: "Could not send verification code. Please try again." },
-        { status: 502 }
-      );
+    if (!bypassOtp) {
+      let res: Response;
+      try {
+        res = await fetch(`${baseUrl}/api/otp/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            type: "numeric",
+            organization: "ChartAnalytic",
+            subject: "Verify your email",
+          }),
+        });
+      } catch (fetchErr) {
+        const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        console.error("[send-otp] OTP service unreachable", msg);
+        return NextResponse.json(
+          { error: "Verification service is unreachable. Try again later or set OTP_SERVICE_URL=skip in .env to test without email." },
+          { status: 502 }
+        );
+      }
+
+      if (!res.ok) {
+        const errText = await res.text();
+        console.error("[send-otp] OTP service error", res.status, errText);
+        if (res.status === 405) {
+          return NextResponse.json(
+            { error: "Verification service is misconfigured (405). Set OTP_SERVICE_URL=skip in your environment to allow signup without email verification, or point it to a valid OTP service." },
+            { status: 502 }
+          );
+        }
+        return NextResponse.json(
+          { error: "Could not send verification code. Please try again." },
+          { status: 502 }
+        );
+      }
     }
 
     const passwordHash = await hash(password, 12);
