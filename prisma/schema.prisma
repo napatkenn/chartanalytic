@@ -59,6 +59,15 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+model PendingRegistration {
+  email       String   @unique
+  passwordHash String
+  name        String?
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
 model ChartAnalysis {
   id          String   @id @default(cuid())
   userId      String
