@@ -90,11 +90,13 @@ model ChartAnalysis {
   stopLoss     String?
   takeProfit2  String?
   stopLoss2    String?
-  riskReward   String?
-  confidence   Int?     // 0-100
-  reasoning    String
-  rawResponse String?  // full AI response for audit
-  createdAt   DateTime @default(now())
+  riskReward        String?
+  confidence        Int?     // 0-100
+  reasoning         String
+  invalidationLevel String?  // subscriber-only: price that invalidates setup
+  keyRisk           String?  // subscriber-only: key risk or caveat
+  rawResponse       String?  // full AI response for audit
+  createdAt         DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

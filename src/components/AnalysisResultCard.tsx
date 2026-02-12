@@ -130,6 +130,19 @@ export function AnalysisResultCard({
         <p className="text-sm leading-relaxed text-gray-700">{analysis.reasoning}</p>
       </div>
 
+      {analysis.invalidationLevel && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+          <Label>Invalidation level</Label>
+          <p className="font-mono text-sm font-medium text-amber-900">{analysis.invalidationLevel}</p>
+        </div>
+      )}
+      {analysis.keyRisk && (
+        <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3">
+          <Label>Key risk / caveat</Label>
+          <p className="text-sm text-gray-700">{analysis.keyRisk}</p>
+        </div>
+      )}
+
       <Link
         href={`/analysis/${analysis.id}`}
         className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700"

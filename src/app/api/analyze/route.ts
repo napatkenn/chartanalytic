@@ -10,7 +10,7 @@ import { getOrCreateCredits, consumeCredit } from "@/lib/credits";
 import { analyzeChartImage } from "@/lib/ai-analysis";
 import { saveUpload } from "@/lib/storage";
 import { prisma } from "@/lib/db";
-import type { AnalysisOptions } from "@/lib/analysis-types";
+import type { AnalysisOptions, ReasoningDepth, TradingStyle } from "@/lib/analysis-types";
 import { DEFAULT_ANALYSIS_OPTIONS } from "@/lib/analysis-types";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -72,6 +72,19 @@ export async function POST(req: Request) {
     if (v === "2") return 2;
     return defaultVal;
   };
+  const parseMaxSr = (v: FormDataEntryValue | null): 2 | 3 | 4 => {
+    if (v === "3") return 3;
+    if (v === "4") return 4;
+    return 2;
+  };
+  const parseReasoningDepth = (v: FormDataEntryValue | null): ReasoningDepth => {
+    if (v === "brief" || v === "detailed") return v;
+    return "standard";
+  };
+  const parseTradingStyle = (v: FormDataEntryValue | null): TradingStyle | undefined => {
+    if (v === "scalping" || v === "day" || v === "swing") return v;
+    return undefined;
+  };
   const isSubscribed = !!subscription;
   let analysisOptions: AnalysisOptions = {
     ...DEFAULT_ANALYSIS_OPTIONS,
@@ -79,15 +92,23 @@ export async function POST(req: Request) {
     numSl: parseNum(formData.get("numSl"), 1),
     includeConfidence: formData.get("includeConfidence") !== "false",
     includeRiskReward: formData.get("includeRiskReward") !== "false",
-    extendedReasoning: formData.get("extendedReasoning") === "true",
+    reasoningDepth: parseReasoningDepth(formData.get("reasoningDepth")),
+    maxSupportResistance: parseMaxSr(formData.get("maxSupportResistance")),
+    tradingStyle: parseTradingStyle(formData.get("tradingStyle")),
+    includeInvalidation: formData.get("includeInvalidation") === "true",
+    includeCaveat: formData.get("includeCaveat") === "true",
   };
-  // Subscriber-only: 2 TP, 2 SL, extended reasoning
+  // Subscriber-only: 2 TP, 2 SL, reasoning depth, max S/R, trading style, invalidation, caveat
   if (!isSubscribed) {
     analysisOptions = {
       ...analysisOptions,
       numTp: 1,
       numSl: 1,
-      extendedReasoning: false,
+      reasoningDepth: "standard",
+      maxSupportResistance: 2,
+      tradingStyle: undefined,
+      includeInvalidation: false,
+      includeCaveat: false,
     };
   }
 
@@ -166,6 +187,8 @@ export async function POST(req: Request) {
       riskReward: analysisResult.riskReward,
       confidence: analysisResult.confidence ?? null,
       reasoning: analysisResult.reasoning,
+      invalidationLevel: analysisResult.invalidationLevel ?? null,
+      keyRisk: analysisResult.keyRisk ?? null,
       rawResponse: JSON.stringify(analysisResult),
     },
   });

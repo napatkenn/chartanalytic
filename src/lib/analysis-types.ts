@@ -19,6 +19,10 @@ export interface AnalysisResult {
   symbol?: string;
   /** Timeframe from chart if visible e.g. "5m", "15m", "1H" */
   timeframe?: string;
+  /** Subscriber-only: price level that invalidates this setup */
+  invalidationLevel?: string;
+  /** Subscriber-only: key risk or caveat */
+  keyRisk?: string;
 }
 
 export const MARKET_BIAS_LABELS: Record<MarketBias, string> = {
@@ -26,6 +30,12 @@ export const MARKET_BIAS_LABELS: Record<MarketBias, string> = {
   bearish: "Bearish",
   range: "Range",
 };
+
+/** Reasoning depth (subscriber-only). */
+export type ReasoningDepth = "brief" | "standard" | "detailed";
+
+/** Trading style (subscriber-only). */
+export type TradingStyle = "scalping" | "day" | "swing";
 
 /** User preferences for analysis output (e.g. on /analyze page). */
 export interface AnalysisOptions {
@@ -37,8 +47,16 @@ export interface AnalysisOptions {
   includeConfidence?: boolean;
   /** Include risk:reward ratio. */
   includeRiskReward?: boolean;
-  /** Subscriber-only: longer, more detailed reasoning (4–6 sentences). */
-  extendedReasoning?: boolean;
+  /** Subscriber-only: reasoning length. Replaces extendedReasoning. */
+  reasoningDepth?: ReasoningDepth;
+  /** Subscriber-only: max number of support/resistance levels (2, 3, or 4). */
+  maxSupportResistance?: 2 | 3 | 4;
+  /** Subscriber-only: trading style for tailoring levels and reasoning. */
+  tradingStyle?: TradingStyle;
+  /** Subscriber-only: include invalidation level. */
+  includeInvalidation?: boolean;
+  /** Subscriber-only: include key risk/caveat. */
+  includeCaveat?: boolean;
 }
 
 export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
@@ -46,5 +64,8 @@ export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
   numSl: 1,
   includeConfidence: true,
   includeRiskReward: true,
-  extendedReasoning: false,
+  reasoningDepth: "standard",
+  maxSupportResistance: 2,
+  includeInvalidation: false,
+  includeCaveat: false,
 };

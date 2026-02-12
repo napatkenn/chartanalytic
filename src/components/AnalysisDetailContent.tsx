@@ -20,6 +20,8 @@ type Props = {
     stopLoss2: string | null;
     riskReward: string | null;
     reasoning: string;
+    invalidationLevel?: string | null;
+    keyRisk?: string | null;
   };
   chartImageUrl: string;
 };
@@ -163,6 +165,19 @@ export function AnalysisDetailContent({ analysis, chartImageUrl }: Props) {
             <Label>Reasoning</Label>
             <p className="text-sm leading-relaxed text-gray-700 mt-1">{analysis.reasoning}</p>
           </div>
+
+          {analysis.invalidationLevel && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-5 py-4">
+              <Label>Invalidation level</Label>
+              <p className="font-mono text-sm font-medium text-amber-900 mt-1">{analysis.invalidationLevel}</p>
+            </div>
+          )}
+          {analysis.keyRisk && (
+            <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-5 py-4">
+              <Label>Key risk / caveat</Label>
+              <p className="text-sm text-gray-700 mt-1">{analysis.keyRisk}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

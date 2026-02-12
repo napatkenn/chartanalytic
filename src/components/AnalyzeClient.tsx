@@ -74,10 +74,25 @@ export function AnalyzeClient() {
   useEffect(() => {
     if (!isSubscribed) {
       setOptions((o) => {
-        if (o.numTp === 2 || o.numSl === 2 || o.extendedReasoning) {
-          return { ...o, numTp: 1, numSl: 1, extendedReasoning: false };
-        }
-        return o;
+        const changed =
+          o.numTp === 2 ||
+          o.numSl === 2 ||
+          o.reasoningDepth !== "standard" ||
+          (o.maxSupportResistance ?? 2) !== 2 ||
+          o.tradingStyle != null ||
+          o.includeInvalidation ||
+          o.includeCaveat;
+        if (!changed) return o;
+        return {
+          ...o,
+          numTp: 1,
+          numSl: 1,
+          reasoningDepth: "standard",
+          maxSupportResistance: 2,
+          tradingStyle: undefined,
+          includeInvalidation: false,
+          includeCaveat: false,
+        };
       });
     }
   }, [isSubscribed]);
@@ -137,7 +152,11 @@ export function AnalyzeClient() {
       form.set("numSl", String(options.numSl));
       form.set("includeConfidence", options.includeConfidence !== false ? "true" : "false");
       form.set("includeRiskReward", options.includeRiskReward !== false ? "true" : "false");
-      form.set("extendedReasoning", options.extendedReasoning === true ? "true" : "false");
+      form.set("reasoningDepth", options.reasoningDepth ?? "standard");
+      form.set("maxSupportResistance", String(options.maxSupportResistance ?? 2));
+      if (options.tradingStyle) form.set("tradingStyle", options.tradingStyle);
+      form.set("includeInvalidation", options.includeInvalidation === true ? "true" : "false");
+      form.set("includeCaveat", options.includeCaveat === true ? "true" : "false");
       const res = await fetch("/api/analyze", { method: "POST", body: form, signal: controller.signal });
       clearTimeout(timeoutId);
       let data: { error?: string; code?: string; creditsRemaining?: number; dailyLimit?: number | null };
@@ -241,9 +260,9 @@ export function AnalyzeClient() {
             <div className={`mt-4 space-y-4 rounded-xl border border-gray-200 p-4 ${!isSubscribed ? "bg-gray-50/80" : "bg-gray-50/50"}`}>
               {!isSubscribed && (
                 <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
-                  You can see these options but only subscribers can change them.{" "}
+                  You can view these options.{" "}
                   <Link href="/subscribe" className="font-medium text-amber-700 underline hover:text-amber-800">
-                    Subscribe to customize
+                    Upgrade your plan to customize
                   </Link>
                 </p>
               )}
@@ -315,6 +334,86 @@ export function AnalyzeClient() {
                   </button>
                 </div>
               </div>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Support & resistance levels</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {([2, 3, 4] as const).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => isSubscribed && setOptions((o) => ({ ...o, maxSupportResistance: n }))}
+                      disabled={!isSubscribed}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                        (options.maxSupportResistance ?? 2) === n
+                          ? "border-emerald-500 bg-emerald-500 text-white"
+                          : !isSubscribed
+                            ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      {n} levels
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Trading style</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => isSubscribed && setOptions((o) => ({ ...o, tradingStyle: undefined }))}
+                    disabled={!isSubscribed}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                      !options.tradingStyle
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : !isSubscribed
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    Any
+                  </button>
+                  {(["scalping", "day", "swing"] as const).map((style) => (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() => isSubscribed && setOptions((o) => ({ ...o, tradingStyle: style }))}
+                      disabled={!isSubscribed}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition capitalize ${
+                        options.tradingStyle === style
+                          ? "border-emerald-500 bg-emerald-500 text-white"
+                          : !isSubscribed
+                            ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      {style === "day" ? "Day trade" : style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Reasoning depth</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(["brief", "standard", "detailed"] as const).map((depth) => (
+                    <button
+                      key={depth}
+                      type="button"
+                      onClick={() => isSubscribed && setOptions((o) => ({ ...o, reasoningDepth: depth }))}
+                      disabled={!isSubscribed}
+                      className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition capitalize ${
+                        (options.reasoningDepth ?? "standard") === depth
+                          ? "border-emerald-500 bg-emerald-500 text-white"
+                          : !isSubscribed
+                            ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                            : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      {depth}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-4">
                 <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
                   <input
@@ -339,12 +438,22 @@ export function AnalyzeClient() {
                 <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
                   <input
                     type="checkbox"
-                    checked={options.extendedReasoning === true}
-                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, extendedReasoning: e.target.checked }))}
+                    checked={options.includeInvalidation === true}
+                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, includeInvalidation: e.target.checked }))}
                     disabled={!isSubscribed}
                     className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
                   />
-                  Extended reasoning (4–6 sentences)
+                  Invalidation level
+                </label>
+                <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
+                  <input
+                    type="checkbox"
+                    checked={options.includeCaveat === true}
+                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, includeCaveat: e.target.checked }))}
+                    disabled={!isSubscribed}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  Key risk / caveat
                 </label>
               </div>
             </div>

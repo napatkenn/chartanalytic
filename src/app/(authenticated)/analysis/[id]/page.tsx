@@ -52,6 +52,8 @@ export default async function AnalysisDetailPage({
             stopLoss2: analysis.stopLoss2,
             riskReward: analysis.riskReward,
             reasoning: analysis.reasoning,
+            invalidationLevel: analysis.invalidationLevel ?? undefined,
+            keyRisk: analysis.keyRisk ?? undefined,
           }}
           chartImageUrl={getUploadUrl(analysis.imageUrl)}
         />
