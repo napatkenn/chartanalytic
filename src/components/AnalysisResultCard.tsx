@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
-import type { AnalysisResult, MarketBias } from "@/lib/analysis-types";
+import type { AnalysisResult, MarketBias, AnalysisOptions } from "@/lib/analysis-types";
 
 type AnalysisWithMeta = {
   id: string;
@@ -46,12 +46,19 @@ export function AnalysisResultCard({
   analysis,
   creditsRemaining,
   dailyLimit,
+  analysisOptions,
 }: {
   analysis: AnalysisWithMeta;
   creditsRemaining: number;
   dailyLimit?: number;
+  /** Options used for this analysis; hides TP2/SL2 or confidence/R:R when not requested */
+  analysisOptions?: AnalysisOptions | null;
 }) {
   const bias = analysis.marketBias as MarketBias;
+  const showTp2 = analysisOptions?.numTp !== 1;
+  const showSl2 = analysisOptions?.numSl !== 1;
+  const showConfidence = analysisOptions?.includeConfidence !== false;
+  const showRiskReward = analysisOptions?.includeRiskReward !== false;
   const biasClass =
     bias === "bullish"
       ? "bg-emerald-100 text-emerald-800"
@@ -71,7 +78,7 @@ export function AnalysisResultCard({
         <span className="text-xs text-gray-500">
           {formatDistanceToNow(new Date(analysis.createdAt), { addSuffix: true })}
         </span>
-        {analysis.confidence != null && (
+        {showConfidence && analysis.confidence != null && (
           <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-medium text-gray-700">
             {analysis.confidence}% confidence
           </span>
@@ -103,17 +110,17 @@ export function AnalysisResultCard({
         </div>
       </div>
 
-      {/* Trade plan: Targets (Entry, TP, TP2) | Risk (SL, SL2, R:R) */}
+      {/* Trade plan: Targets (Entry, TP, TP2?) | Risk (SL, SL2?, R:R?) */}
       <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-emerald-50/60 px-4 py-3 border-b border-gray-100">
+        <div className={`grid gap-4 bg-emerald-50/60 px-4 py-3 border-b border-gray-100 ${showTp2 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
           <LevelCell label="Entry" value={analysis.entry ?? ""} variant="green" />
           <LevelCell label="Take profit" value={analysis.takeProfit ?? ""} variant="green" />
-          <LevelCell label="Take profit 2" value={analysis.takeProfit2 ?? ""} variant="green" />
+          {showTp2 && <LevelCell label="Take profit 2" value={analysis.takeProfit2 ?? ""} variant="green" />}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-red-50/40 px-4 py-3">
+        <div className={`grid gap-4 bg-red-50/40 px-4 py-3 ${showSl2 && showRiskReward ? "grid-cols-2 sm:grid-cols-3" : showSl2 || showRiskReward ? "grid-cols-2" : "grid-cols-1"}`}>
           <LevelCell label="Stop loss" value={analysis.stopLoss ?? ""} variant="red" />
-          <LevelCell label="Stop loss 2" value={analysis.stopLoss2 ?? ""} variant="red" />
-          <LevelCell label="Risk:Reward" value={analysis.riskReward ?? ""} variant="neutral" />
+          {showSl2 && <LevelCell label="Stop loss 2" value={analysis.stopLoss2 ?? ""} variant="red" />}
+          {showRiskReward && <LevelCell label="Risk:Reward" value={analysis.riskReward ?? ""} variant="neutral" />}
         </div>
       </div>
 

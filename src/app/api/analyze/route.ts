@@ -10,6 +10,8 @@ import { getOrCreateCredits, consumeCredit } from "@/lib/credits";
 import { analyzeChartImage } from "@/lib/ai-analysis";
 import { saveUpload } from "@/lib/storage";
 import { prisma } from "@/lib/db";
+import type { AnalysisOptions } from "@/lib/analysis-types";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@/lib/analysis-types";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -65,6 +67,30 @@ export async function POST(req: Request) {
     );
   }
 
+  const parseNum = (v: FormDataEntryValue | null, defaultVal: 1 | 2): 1 | 2 => {
+    if (v === "1" || v === 1) return 1;
+    if (v === "2" || v === 2) return 2;
+    return defaultVal;
+  };
+  const isSubscribed = !!subscription;
+  let analysisOptions: AnalysisOptions = {
+    ...DEFAULT_ANALYSIS_OPTIONS,
+    numTp: parseNum(formData.get("numTp"), 1),
+    numSl: parseNum(formData.get("numSl"), 1),
+    includeConfidence: formData.get("includeConfidence") !== "false",
+    includeRiskReward: formData.get("includeRiskReward") !== "false",
+    extendedReasoning: formData.get("extendedReasoning") === "true",
+  };
+  // Subscriber-only: 2 TP, 2 SL, extended reasoning
+  if (!isSubscribed) {
+    analysisOptions = {
+      ...analysisOptions,
+      numTp: 1,
+      numSl: 1,
+      extendedReasoning: false,
+    };
+  }
+
   if (!ALLOWED_TYPES.includes(file.type)) {
     return NextResponse.json(
       { error: "Allowed types: PNG, JPEG, WebP" },
@@ -109,7 +135,7 @@ export async function POST(req: Request) {
 
   let analysisResult;
   try {
-    analysisResult = await analyzeChartImage(dataUrl);
+    analysisResult = await analyzeChartImage(dataUrl, analysisOptions);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Analysis failed";
     const isTimeout = message.includes("timed out");

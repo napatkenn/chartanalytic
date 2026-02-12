@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { AnalysisResultCard } from "./AnalysisResultCard";
-import type { AnalysisResult } from "@/lib/analysis-types";
+import type { AnalysisResult, AnalysisOptions } from "@/lib/analysis-types";
+import { DEFAULT_ANALYSIS_OPTIONS } from "@/lib/analysis-types";
 import { trackEvent } from "@/lib/gtag";
 
 interface ApiResponse {
@@ -24,6 +25,15 @@ function UploadIcon({ className }: { className?: string }) {
   );
 }
 
+function SettingsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
 export function AnalyzeClient() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -33,7 +43,11 @@ export function AnalyzeClient() {
   const [loading, setLoading] = useState(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
   const [dailyLimit, setDailyLimit] = useState<number | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [options, setOptions] = useState<AnalysisOptions>(() => ({ ...DEFAULT_ANALYSIS_OPTIONS }));
+  const [optionsUsed, setOptionsUsed] = useState<AnalysisOptions | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -47,16 +61,31 @@ export function AnalyzeClient() {
       if (subRes.ok && subData.active) {
         setRemainingToday(subData.remainingToday ?? 0);
         setDailyLimit(subData.dailyLimit ?? null);
+        setIsSubscribed(true);
       } else if (creditsRes.ok && typeof creditsData.credits === "number") {
         setRemainingToday(creditsData.credits);
         setDailyLimit(null);
+        setIsSubscribed(false);
       }
     })();
   }, []);
 
+  // When not subscribed, reset subscriber-only options to defaults
+  useEffect(() => {
+    if (!isSubscribed) {
+      setOptions((o) => {
+        if (o.numTp === 2 || o.numSl === 2 || o.extendedReasoning) {
+          return { ...o, numTp: 1, numSl: 1, extendedReasoning: false };
+        }
+        return o;
+      });
+    }
+  }, [isSubscribed]);
+
   const handleFile = (f: File | null) => {
     setError(null);
     setResult(null);
+    setOptionsUsed(null);
     if (!f) {
       setFile(null);
       setPreview(null);
@@ -104,6 +133,11 @@ export function AnalyzeClient() {
     try {
       const form = new FormData();
       form.set("chart", file);
+      form.set("numTp", String(options.numTp));
+      form.set("numSl", String(options.numSl));
+      form.set("includeConfidence", options.includeConfidence !== false ? "true" : "false");
+      form.set("includeRiskReward", options.includeRiskReward !== false ? "true" : "false");
+      form.set("extendedReasoning", options.extendedReasoning === true ? "true" : "false");
       const res = await fetch("/api/analyze", { method: "POST", body: form, signal: controller.signal });
       clearTimeout(timeoutId);
       let data: { error?: string; code?: string; creditsRemaining?: number; dailyLimit?: number | null };
@@ -127,6 +161,7 @@ export function AnalyzeClient() {
         return;
       }
       setResult(data as ApiResponse);
+      setOptionsUsed({ ...options });
       trackEvent("analysis_complete");
       setRemainingToday(data.creditsRemaining ?? null);
       setDailyLimit(data.dailyLimit ?? null);
@@ -153,9 +188,11 @@ export function AnalyzeClient() {
     if (subRes.ok && subData.active) {
       setRemainingToday(subData.remainingToday ?? 0);
       setDailyLimit(subData.dailyLimit ?? null);
+      setIsSubscribed(true);
     } else if (creditsRes.ok && typeof creditsData.credits === "number") {
       setRemainingToday(creditsData.credits);
       setDailyLimit(null);
+      setIsSubscribed(false);
     }
   };
 
@@ -198,6 +235,132 @@ export function AnalyzeClient() {
             </>
           )}
         </div>
+        {/* Analysis settings */}
+        <div className="mt-5 border-t border-gray-100 pt-5">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((o) => !o)}
+            className="flex w-full items-center justify-between text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            <span className="flex items-center gap-2">
+              <SettingsIcon className="h-4 w-4 text-gray-500" />
+              Analysis settings
+            </span>
+            <span className="text-gray-400" aria-hidden>{settingsOpen ? "▼" : "▶"}</span>
+          </button>
+          {settingsOpen && (
+            <div className={`mt-4 space-y-4 rounded-xl border border-gray-200 p-4 ${!isSubscribed ? "bg-gray-50/80" : "bg-gray-50/50"}`}>
+              {!isSubscribed && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-800">
+                  You can see these options but only subscribers can change them.{" "}
+                  <Link href="/subscribe" className="font-medium text-amber-700 underline hover:text-amber-800">
+                    Subscribe to customize
+                  </Link>
+                </p>
+              )}
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Take profit targets</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => isSubscribed && setOptions((o) => ({ ...o, numTp: 1 }))}
+                    disabled={!isSubscribed}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                      options.numTp === 1
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : !isSubscribed
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    1 target
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => isSubscribed && setOptions((o) => ({ ...o, numTp: 2 }))}
+                    disabled={!isSubscribed}
+                    title={!isSubscribed ? "Subscribe to change settings" : undefined}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                      options.numTp === 2
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : !isSubscribed
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    2 targets
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Stop loss levels</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => isSubscribed && setOptions((o) => ({ ...o, numSl: 1 }))}
+                    disabled={!isSubscribed}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                      options.numSl === 1
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : !isSubscribed
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    1 level
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => isSubscribed && setOptions((o) => ({ ...o, numSl: 2 }))}
+                    disabled={!isSubscribed}
+                    title={!isSubscribed ? "Subscribe to change settings" : undefined}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                      options.numSl === 2
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : !isSubscribed
+                          ? "cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                    }`}
+                  >
+                    2 levels
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
+                  <input
+                    type="checkbox"
+                    checked={options.includeConfidence !== false}
+                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, includeConfidence: e.target.checked }))}
+                    disabled={!isSubscribed}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  Confidence score
+                </label>
+                <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
+                  <input
+                    type="checkbox"
+                    checked={options.includeRiskReward !== false}
+                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, includeRiskReward: e.target.checked }))}
+                    disabled={!isSubscribed}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  Risk:Reward ratio
+                </label>
+                <label className={`flex items-center gap-2 text-sm ${!isSubscribed ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"}`}>
+                  <input
+                    type="checkbox"
+                    checked={options.extendedReasoning === true}
+                    onChange={(e) => isSubscribed && setOptions((o) => ({ ...o, extendedReasoning: e.target.checked }))}
+                    disabled={!isSubscribed}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                  />
+                  Extended reasoning (4–6 sentences)
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="button"
@@ -237,6 +400,7 @@ export function AnalyzeClient() {
             analysis={result.analysis}
             creditsRemaining={result.creditsRemaining}
             dailyLimit={result.dailyLimit ?? undefined}
+            analysisOptions={optionsUsed}
           />
         ) : (
           <div className="min-h-[280px] overflow-y-auto rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">

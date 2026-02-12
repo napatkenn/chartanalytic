@@ -26,3 +26,25 @@ export const MARKET_BIAS_LABELS: Record<MarketBias, string> = {
   bearish: "Bearish",
   range: "Range",
 };
+
+/** User preferences for analysis output (e.g. on /analyze page). */
+export interface AnalysisOptions {
+  /** Number of take profit levels to return (1 or 2). 2 is subscriber-only. */
+  numTp: 1 | 2;
+  /** Number of stop loss levels to return (1 or 2). 2 is subscriber-only. */
+  numSl: 1 | 2;
+  /** Include confidence score 0–100. */
+  includeConfidence?: boolean;
+  /** Include risk:reward ratio. */
+  includeRiskReward?: boolean;
+  /** Subscriber-only: longer, more detailed reasoning (4–6 sentences). */
+  extendedReasoning?: boolean;
+}
+
+export const DEFAULT_ANALYSIS_OPTIONS: AnalysisOptions = {
+  numTp: 1,
+  numSl: 1,
+  includeConfidence: true,
+  includeRiskReward: true,
+  extendedReasoning: false,
+};
