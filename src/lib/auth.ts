@@ -1,14 +1,21 @@
 import { getServerSession } from "next-auth";
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { compare } from "bcryptjs";
 import { prisma } from "./db";
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   // On Vercel set AUTH_TRUST_HOST=true so login works on preview and production URLs
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/login", error: "/login" },
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -46,6 +53,11 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string;
       }
       return session;
+    },
+    async signIn({ user, account }) {
+      if (account?.provider === "credentials") return true;
+      if (account?.provider === "google" && user?.email) return true;
+      return true;
     },
   },
 };
