@@ -49,6 +49,7 @@ export function AnalyzeClient() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [options, setOptions] = useState<AnalysisOptions>(() => ({ ...DEFAULT_ANALYSIS_OPTIONS }));
   const [optionsUsed, setOptionsUsed] = useState<AnalysisOptions | null>(null);
+  const [showOutOfCreditsPrompt, setShowOutOfCreditsPrompt] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -140,6 +141,10 @@ export function AnalyzeClient() {
 
   const runAnalysis = async () => {
     if (!file) return;
+    if (remainingToday !== null && remainingToday === 0) {
+      setShowOutOfCreditsPrompt(true);
+      return;
+    }
     trackEvent("analysis_started");
     setError(null);
     setErrorCode(null);
@@ -217,6 +222,7 @@ export function AnalyzeClient() {
   };
 
   return (
+    <>
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Chart preview – always light themed */}
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm text-gray-900">
@@ -567,5 +573,40 @@ export function AnalyzeClient() {
         )}
       </div>
     </div>
+
+    {showOutOfCreditsPrompt && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/50" onClick={() => setShowOutOfCreditsPrompt(false)} aria-hidden />
+        <div
+          className="relative w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="out-of-credits-prompt-title"
+        >
+          <h3 id="out-of-credits-prompt-title" className="text-lg font-bold text-gray-900">
+            Credits have run out
+          </h3>
+          <p className="mt-2 text-sm text-gray-600">
+            Upgrade your plan to continue analyzing charts.
+          </p>
+          <div className="mt-6 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setShowOutOfCreditsPrompt(false)}
+              className="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Dismiss
+            </button>
+            <Link
+              href="/subscribe"
+              className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-center text-sm font-semibold text-white hover:bg-emerald-600"
+            >
+              Upgrade plan
+            </Link>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

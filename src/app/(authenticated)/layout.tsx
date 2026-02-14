@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { DashboardShell } from "@/components/DashboardShell";
 import { SubscriptionSuccessTracker } from "@/components/SubscriptionSuccessTracker";
 import { TrialOfferPopup } from "@/components/TrialOfferPopup";
-import { OutOfCreditsModal } from "@/components/OutOfCreditsModal";
+import { OutOfCreditsBanner } from "@/components/OutOfCreditsBanner";
 
 export default async function AuthenticatedLayout({
   children,
@@ -41,7 +41,7 @@ export default async function AuthenticatedLayout({
     <div className="min-h-screen bg-white">
       <SubscriptionSuccessTracker />
       <TrialOfferPopup />
-      <OutOfCreditsModal show={showOutOfCreditsLock} />
+      <OutOfCreditsBanner show={showOutOfCreditsLock} />
       <DashboardShell
         user={session.user}
         credits={credits}
