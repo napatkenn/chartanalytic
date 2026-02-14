@@ -12,12 +12,12 @@ const PILLS = [
 
 export function ScrollingStrip() {
   return (
-    <div className="relative overflow-hidden border-y border-gray-200 bg-gray-50 py-3">
+    <div className="relative overflow-hidden border-y border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
       <div className="flex animate-scroll gap-8 whitespace-nowrap">
         {[...PILLS, ...PILLS].map((label, i) => (
           <span
             key={i}
-            className="text-sm font-medium text-gray-500"
+            className="text-sm font-medium text-gray-500 dark:text-gray-400"
           >
             {label}
           </span>

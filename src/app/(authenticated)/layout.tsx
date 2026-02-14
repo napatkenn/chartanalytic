@@ -33,7 +33,7 @@ export default async function AuthenticatedLayout({
       : null;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <SubscriptionSuccessTracker />
       <TrialOfferPopup />
       <DashboardShell

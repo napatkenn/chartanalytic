@@ -8,6 +8,7 @@ import { getUploadUrl } from "@/lib/storage";
 import { AnalysisDetailContent } from "@/components/AnalysisDetailContent";
 import { TradeOutcomeForm } from "@/components/TradeOutcomeForm";
 import { Disclaimer } from "@/components/Disclaimer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Analysis — ChartAnalytic",
@@ -33,10 +34,11 @@ export default async function AnalysisDetailPage({
 
   return (
     <>
-      <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6">
-        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700">
+      <header className="flex h-14 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6">
+        <Link href="/dashboard" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
           ← Dashboard
         </Link>
+        <ThemeToggle />
       </header>
       <main className="mx-auto max-w-4xl px-6 py-8">
         <AnalysisDetailContent

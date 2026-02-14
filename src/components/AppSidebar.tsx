@@ -133,7 +133,7 @@ export function AppSidebar({
         />
       )}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-gray-50 transition-all duration-200 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900 transition-all duration-200 ${
           isMobile
             ? `w-72 shadow-xl ${mobileOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`
             : `${sidebarWidth}`
@@ -145,7 +145,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="absolute right-0 top-[35%] z-50 flex h-9 w-9 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 hover:shadow-lg"
+            className="absolute right-0 top-[35%] z-50 flex h-9 w-9 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-md transition hover:bg-gray-50 hover:text-gray-900 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-gray-100"
             aria-label={collapsed ? "Expand sidebar" : "Minimize sidebar"}
           >
             {collapsed ? (
@@ -159,7 +159,7 @@ export function AppSidebar({
           <button
             type="button"
             onClick={onMobileClose}
-            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-700 md:hidden"
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 md:hidden"
             aria-label="Close menu"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -169,11 +169,11 @@ export function AppSidebar({
         )}
 
         {/* Logo */}
-        <div className={`flex h-14 items-center gap-2 border-b border-gray-200 ${logoRowPadding} ${isMobile ? "px-4" : ""}`}>
+        <div className={`flex h-14 items-center gap-2 border-b border-gray-200 dark:border-gray-700 ${logoRowPadding} ${isMobile ? "px-4" : ""}`}>
           <Link href="/dashboard" onClick={isMobile ? onMobileClose : undefined} className={`flex min-w-0 items-center gap-2 ${!showExpanded ? "" : "flex-1"}`}>
             <Logo size={24} />
             {showExpanded && (
-              <span className="truncate text-xl font-bold tracking-tight text-black">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
+              <span className="truncate text-xl font-bold tracking-tight text-black dark:text-gray-100">{"Chart"}<span className="text-emerald-500">A</span>{"nalytic"}</span>
             )}
           </Link>
         </div>
@@ -188,7 +188,7 @@ export function AppSidebar({
                 <div
                   key={href}
                   title={!showExpanded ? `${label} — Coming soon` : undefined}
-                  className={`flex min-h-[44px] cursor-not-allowed items-center rounded-lg py-2.5 text-sm font-medium text-gray-400 ${
+                  className={`flex min-h-[44px] cursor-not-allowed items-center rounded-lg py-2.5 text-sm font-medium text-gray-400 dark:text-gray-500 ${
                     !showExpanded ? "w-10 justify-center px-0" : "gap-3 px-3"
                   }`}
                 >
@@ -196,7 +196,7 @@ export function AppSidebar({
                   {showExpanded && (
                     <>
                       <span className="flex-1">{label}</span>
-                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-normal text-gray-500">
+                      <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs font-normal text-gray-500 dark:bg-gray-700 dark:text-gray-400">
                         Coming soon
                       </span>
                     </>
@@ -215,7 +215,7 @@ export function AppSidebar({
                 } ${
                   isActive
                     ? "bg-emerald-500 text-white"
-                    : "text-gray-700 hover:bg-gray-100"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
                 }`}
               >
                 <Icon className="h-5 w-5 shrink-0" />
@@ -226,13 +226,13 @@ export function AppSidebar({
         </nav>
 
       {/* Credits / usage — compact when collapsed (desktop only) */}
-      <div className={`border-t border-gray-200 p-3 ${!showExpanded ? "px-2" : ""}`}>
+      <div className={`border-t border-gray-200 dark:border-gray-700 p-3 ${!showExpanded ? "px-2" : ""}`}>
         {!showExpanded ? (
           <div className="flex flex-col items-center gap-1" title={label}>
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-700">
+            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-300">
               {current}
             </div>
-            <div className="h-1.5 w-full max-w-8 overflow-hidden rounded-full bg-gray-200">
+            <div className="h-1.5 w-full max-w-8 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
               <div
                 className="h-full rounded-full bg-emerald-500 transition-all"
                 style={{ width: `${percent}%` }}
@@ -244,12 +244,12 @@ export function AppSidebar({
             </div>
           </div>
         ) : (
-          <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 px-3 py-2.5 shadow-sm">
             <div className="flex items-center justify-between gap-2 text-xs">
-              <span className="text-gray-500">{isSubscriptionUsage ? "Uploads today" : "Credits"}</span>
-              <span className="font-semibold text-gray-900">{label}</span>
+              <span className="text-gray-500 dark:text-gray-400">{isSubscriptionUsage ? "Uploads today" : "Credits"}</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{label}</span>
             </div>
-            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
               <div
                 className="h-full rounded-full bg-emerald-500 transition-all"
                 style={{ width: `${percent}%` }}
@@ -260,8 +260,8 @@ export function AppSidebar({
               />
             </div>
             <div className="mt-1.5 flex items-center justify-between gap-2 text-xs">
-              <span className="text-gray-500">Plan</span>
-              <span className="font-semibold capitalize text-gray-900">{planTier}</span>
+              <span className="text-gray-500 dark:text-gray-400">Plan</span>
+              <span className="font-semibold capitalize text-gray-900 dark:text-gray-100">{planTier}</span>
             </div>
             {!hasSubscription && (
               <Link
@@ -274,7 +274,7 @@ export function AppSidebar({
             {hasSubscription && usage && usage.remaining === 0 && (
               <Link
                 href="/subscribe"
-                className="mt-2 block w-full rounded-md border border-emerald-500 py-1.5 text-center text-xs font-medium text-emerald-600 hover:bg-emerald-50"
+                className="mt-2 block w-full rounded-md border border-emerald-500 py-1.5 text-center text-xs font-medium text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/20"
               >
                 Upgrade for more
               </Link>
@@ -284,20 +284,20 @@ export function AppSidebar({
       </div>
 
       {/* User block */}
-      <div className={`relative border-t border-gray-200 p-3 ${!showExpanded ? "px-2" : ""}`} ref={menuRef}>
+      <div className={`relative border-t border-gray-200 dark:border-gray-700 p-3 ${!showExpanded ? "px-2" : ""}`} ref={menuRef}>
         <div className={`flex items-center rounded-lg px-3 py-2 ${!showExpanded ? "justify-center px-0" : "gap-3"}`}>
           <button
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
-            className="flex items-center gap-3 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1"
+            className="flex items-center gap-3 rounded-lg text-left focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 dark:focus:ring-offset-gray-900"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
               {displayName.charAt(0).toUpperCase()}
             </div>
             {showExpanded && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-900">{displayName}</p>
-                <p className="truncate text-xs text-gray-500">{displaySub}</p>
+                <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{displayName}</p>
+                <p className="truncate text-xs text-gray-500 dark:text-gray-400">{displaySub}</p>
               </div>
             )}
           </button>
@@ -305,7 +305,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+              className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
               aria-label="User menu"
             >
               <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -315,10 +315,10 @@ export function AppSidebar({
           )}
         </div>
         {menuOpen && (
-          <div className={`absolute bottom-14 rounded-lg border border-gray-200 bg-white py-1 shadow-lg ${!showExpanded ? "left-2 right-2" : "left-3 right-3"}`}>
+          <div className={`absolute bottom-14 rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 py-1 shadow-lg ${!showExpanded ? "left-2 right-2" : "left-3 right-3"}`}>
             <Link
               href="/subscribe"
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
               onClick={() => { setMenuOpen(false); isMobile && onMobileClose?.(); }}
             >
               Manage subscription
@@ -326,7 +326,7 @@ export function AppSidebar({
             <button
               type="button"
               onClick={() => { isMobile && onMobileClose?.(); signOut({ callbackUrl: "/" }); }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Sign out
             </button>

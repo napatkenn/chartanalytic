@@ -54,8 +54,8 @@ export function TradeOutcomeForm({
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Did this trade win or lose?
       </h3>
       <div className="mt-4 flex flex-wrap items-end gap-4">
@@ -66,7 +66,7 @@ export function TradeOutcomeForm({
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
               outcome === "win"
                 ? "border-emerald-500 bg-emerald-500 text-white"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500"
             }`}
           >
             Win
@@ -77,14 +77,14 @@ export function TradeOutcomeForm({
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
               outcome === "lose"
                 ? "border-red-500 bg-red-500 text-white"
-                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500"
             }`}
           >
             Lose
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="trade-amount" className="text-sm text-gray-600">
+          <label htmlFor="trade-amount" className="text-sm text-gray-600 dark:text-gray-400">
             Amount
           </label>
           <input
@@ -95,7 +95,7 @@ export function TradeOutcomeForm({
             placeholder="0"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="w-28 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
           />
         </div>
         <button
@@ -108,7 +108,7 @@ export function TradeOutcomeForm({
         </button>
       </div>
       {error && (
-        <p className="mt-2 text-sm text-red-600" role="alert">
+        <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
           {error}
         </p>
       )}

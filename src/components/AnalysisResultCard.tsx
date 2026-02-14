@@ -13,7 +13,7 @@ type AnalysisWithMeta = {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500">
+    <span className="mb-1 block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
       {children}
     </span>
   );
@@ -30,10 +30,10 @@ function LevelCell({
 }) {
   const valueClass =
     variant === "green"
-      ? "text-emerald-700 font-medium"
+      ? "text-emerald-700 dark:text-emerald-300 font-medium"
       : variant === "red"
-        ? "text-red-700 font-medium"
-        : "text-gray-900 font-medium";
+        ? "text-red-700 dark:text-red-300 font-medium"
+        : "text-gray-900 dark:text-gray-100 font-medium";
   return (
     <div className="min-w-0">
       <Label>{label}</Label>
@@ -61,10 +61,10 @@ export function AnalysisResultCard({
   const showRiskReward = analysisOptions?.includeRiskReward !== false;
   const biasClass =
     bias === "bullish"
-      ? "bg-emerald-100 text-emerald-800"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
       : bias === "bearish"
-        ? "bg-red-100 text-red-800"
-        : "bg-amber-100 text-amber-800";
+        ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+        : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
 
   return (
     <div className="space-y-6">
@@ -75,15 +75,15 @@ export function AnalysisResultCard({
         >
           {MARKET_BIAS_LABELS[bias] ?? analysis.marketBias}
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
           {formatDistanceToNow(new Date(analysis.createdAt), { addSuffix: true })}
         </span>
         {showConfidence && analysis.confidence != null && (
-          <span className="rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs font-medium text-gray-700">
+          <span className="rounded-md bg-gray-100 dark:bg-gray-600 px-2 py-0.5 font-mono text-xs font-medium text-gray-700 dark:text-gray-200">
             {analysis.confidence}% confidence
           </span>
         )}
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400 dark:text-gray-500">
           {dailyLimit != null
             ? `· ${creditsRemaining} / ${dailyLimit} today`
             : `· ${creditsRemaining} credits`}
@@ -91,10 +91,10 @@ export function AnalysisResultCard({
       </div>
 
       {/* Support & Resistance */}
-      <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3">
+      <div className="grid grid-cols-2 gap-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/50 px-4 py-3">
         <div>
           <Label>Support</Label>
-          <ul className="font-mono text-sm text-gray-900">
+          <ul className="font-mono text-sm text-gray-900 dark:text-gray-100">
             {analysis.support?.length
               ? analysis.support.map((s, i) => <li key={i}>{s}</li>)
               : "—"}
@@ -102,7 +102,7 @@ export function AnalysisResultCard({
         </div>
         <div>
           <Label>Resistance</Label>
-          <ul className="font-mono text-sm text-gray-900">
+          <ul className="font-mono text-sm text-gray-900 dark:text-gray-100">
             {analysis.resistance?.length
               ? analysis.resistance.map((r, i) => <li key={i}>{r}</li>)
               : "—"}
@@ -111,13 +111,13 @@ export function AnalysisResultCard({
       </div>
 
       {/* Trade plan: Targets (Entry, TP, TP2?) | Risk (SL, SL2?, R:R?) */}
-      <div className="rounded-xl border border-gray-200 overflow-hidden">
-        <div className={`grid gap-4 bg-emerald-50/60 px-4 py-3 border-b border-gray-100 ${showTp2 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
+      <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+        <div className={`grid gap-4 bg-emerald-50/60 dark:bg-emerald-900/30 px-4 py-3 border-b border-gray-100 dark:border-gray-600 ${showTp2 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
           <LevelCell label="Entry" value={analysis.entry ?? ""} variant="green" />
           <LevelCell label="Take profit" value={analysis.takeProfit ?? ""} variant="green" />
           {showTp2 && <LevelCell label="Take profit 2" value={analysis.takeProfit2 ?? ""} variant="green" />}
         </div>
-        <div className={`grid gap-4 bg-red-50/40 px-4 py-3 ${showSl2 && showRiskReward ? "grid-cols-2 sm:grid-cols-3" : showSl2 || showRiskReward ? "grid-cols-2" : "grid-cols-1"}`}>
+        <div className={`grid gap-4 bg-red-50/40 dark:bg-red-900/20 px-4 py-3 ${showSl2 && showRiskReward ? "grid-cols-2 sm:grid-cols-3" : showSl2 || showRiskReward ? "grid-cols-2" : "grid-cols-1"}`}>
           <LevelCell label="Stop loss" value={analysis.stopLoss ?? ""} variant="red" />
           {showSl2 && <LevelCell label="Stop loss 2" value={analysis.stopLoss2 ?? ""} variant="red" />}
           {showRiskReward && <LevelCell label="Risk:Reward" value={analysis.riskReward ?? ""} variant="neutral" />}
@@ -127,25 +127,25 @@ export function AnalysisResultCard({
       {/* Reasoning */}
       <div>
         <Label>Reasoning</Label>
-        <p className="text-sm leading-relaxed text-gray-700">{analysis.reasoning}</p>
+        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{analysis.reasoning}</p>
       </div>
 
       {analysis.invalidationLevel && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/30 px-4 py-3">
           <Label>Invalidation level</Label>
-          <p className="font-mono text-sm font-medium text-amber-900">{analysis.invalidationLevel}</p>
+          <p className="font-mono text-sm font-medium text-amber-900 dark:text-amber-200">{analysis.invalidationLevel}</p>
         </div>
       )}
       {analysis.keyRisk && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/50 px-4 py-3">
           <Label>Key risk / caveat</Label>
-          <p className="text-sm text-gray-700">{analysis.keyRisk}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{analysis.keyRisk}</p>
         </div>
       )}
 
       <Link
         href={`/analysis/${analysis.id}`}
-        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700"
+        className="inline-flex items-center gap-1 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
       >
         View full analysis
         <span aria-hidden>→</span>

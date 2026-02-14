@@ -9,6 +9,7 @@ import { prisma } from "@/lib/db";
 import { formatDistanceToNow } from "date-fns";
 import { MARKET_BIAS_LABELS } from "@/lib/analysis-types";
 import { Disclaimer } from "@/components/Disclaimer";
+import { DashboardHeaderActions } from "@/components/DashboardHeaderActions";
 
 export const metadata: Metadata = {
   title: "Dashboard — ChartAnalytic",
@@ -56,17 +57,12 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <header className="flex h-14 min-h-[3.5rem] items-center justify-between border-b border-gray-200 bg-white px-4 sm:px-6">
-        <p className="text-sm text-gray-500">Home</p>
-        <Link
-          href="/analyze"
-          className="flex min-h-[44px] items-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 active:bg-emerald-700"
-        >
-          + Create
-        </Link>
+      <header className="flex h-14 min-h-[3.5rem] items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 sm:px-6">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Home</p>
+        <DashboardHeaderActions />
       </header>
 
-      <main className="min-h-screen bg-gray-50">
+      <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
         {/* Welcome banner */}
         <section className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-6 text-white sm:px-6 sm:py-8">
           <h1 className="text-xl font-bold sm:text-2xl">Welcome back, {displayName}</h1>
@@ -78,40 +74,40 @@ export default async function DashboardPage() {
         {/* Key metrics - 4 cards */}
         <section className="px-4 py-4 sm:px-6 sm:py-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
               <CardIcon icon="upload" />
               <div>
-                <p className="text-sm font-medium text-gray-500">Total Uploads</p>
-                <p className="text-2xl font-bold text-gray-900">{totalUploads}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Uploads</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalUploads}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
               <CardIcon icon="chart" />
               <div>
-                <p className="text-sm font-medium text-gray-500">Charts Analyzed</p>
-                <p className="text-2xl font-bold text-gray-900">{totalUploads}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Charts Analyzed</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalUploads}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
               <CardIcon icon="chat" />
               <div>
-                <p className="text-sm font-medium text-gray-500">AI Responses</p>
-                <p className="text-2xl font-bold text-gray-900">{totalUploads}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">AI Responses</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalUploads}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm">
               <CardIcon icon="wallet" />
               <div>
-                <p className="text-sm font-medium text-gray-500">Today Credits Left</p>
-                <p className="text-2xl font-bold text-gray-900">{todayCreditsLabel}</p>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Today Credits Left</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{todayCreditsLabel}</p>
               </div>
             </div>
           </div>
         </section>
 
         {!subscription && credits === 0 && (
-          <div className="mx-4 mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:mx-6">
-            <p className="font-medium text-amber-800">No credits left. Get more or subscribe to analyze charts.</p>
+          <div className="mx-4 mb-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 p-4 sm:mx-6">
+            <p className="font-medium text-amber-800 dark:text-amber-200">No credits left. Get more or subscribe to analyze charts.</p>
             <Link href="/subscribe" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
               View plans & subscribe
             </Link>
@@ -119,8 +115,8 @@ export default async function DashboardPage() {
         )}
 
         {subscription && remainingToday?.remaining === 0 && (
-          <div className="mx-4 mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:mx-6">
-            <p className="font-medium text-emerald-800">You&apos;ve used all your daily uploads. Upgrade your plan for more.</p>
+          <div className="mx-4 mb-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 p-4 sm:mx-6">
+            <p className="font-medium text-emerald-800 dark:text-emerald-200">You&apos;ve used all your daily uploads. Upgrade your plan for more.</p>
             <Link href="/subscribe" className="mt-3 inline-block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">
               Upgrade plan
             </Link>
@@ -130,12 +126,12 @@ export default async function DashboardPage() {
         {/* Two main panels */}
         <section className="grid gap-4 px-4 pb-6 sm:gap-6 sm:px-6 lg:grid-cols-2">
           {/* AI Analysis Summary - vertical bar chart, same light theme as page */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
             <div className="flex items-center gap-2">
               <CardIcon icon="chart" />
-              <h2 className="text-lg font-semibold text-gray-900">AI Analysis Summary</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Analysis Summary</h2>
             </div>
-            <p className="mt-1 text-sm text-gray-500">Summary of your uploaded chart actions</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Summary of your uploaded chart actions</p>
 
             {/* Vertical bar chart: analyses per trading pair or Unknown */}
             {analyses.length > 0 ? (() => {
@@ -149,12 +145,12 @@ export default async function DashboardPage() {
               const yTicks = Array.from({ length: maxCount + 1 }, (_, i) => i);
               const chartHeight = 180;
               return (
-                <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+                <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/50 p-4">
                   <div className="flex gap-2" style={{ minHeight: chartHeight }}>
                     {/* Y-axis (actual counts: 0, 1, 2, ...) + grid */}
                     <div className="flex shrink-0 flex-col justify-between pr-2 text-right">
                       {yTicks.slice().reverse().map((t) => (
-                        <span key={t} className="text-xs text-gray-500">{t}</span>
+                        <span key={t} className="text-xs text-gray-500 dark:text-gray-400">{t}</span>
                       ))}
                     </div>
                     {/* Grid lines + bars */}
@@ -164,7 +160,7 @@ export default async function DashboardPage() {
                         {yTicks.slice(1).map((_, i) => (
                           <div
                             key={i}
-                            className="border-t border-dashed border-gray-200"
+                            className="border-t border-dashed border-gray-200 dark:border-gray-600"
                             style={{ flex: 1 }}
                           />
                         ))}
@@ -185,7 +181,7 @@ export default async function DashboardPage() {
                                   style={{ height }}
                                 />
                               </div>
-                              <span className="max-w-full truncate text-center text-xs text-gray-600" title={symbol}>
+                              <span className="max-w-full truncate text-center text-xs text-gray-600 dark:text-gray-400" title={symbol}>
                                 {symbol}
                               </span>
                             </div>
@@ -197,9 +193,9 @@ export default async function DashboardPage() {
                 </div>
               );
             })() : (
-              <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/50 flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-sm text-gray-500">No chart data yet</p>
-                <Link href="/analyze" className="mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700">
+              <div className="mt-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/50 flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">No chart data yet</p>
+                <Link href="/analyze" className="mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">
                   Upload a chart to get started
                 </Link>
               </div>
@@ -207,41 +203,41 @@ export default async function DashboardPage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Recent Activity</h2>
               </div>
-              <Link href="/history" className="text-sm font-medium text-emerald-600 hover:text-emerald-700">
+              <Link href="/history" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">
                 View All History
               </Link>
             </div>
-            <p className="mt-1 text-sm text-gray-500">Your latest uploads and analyses</p>
-            <div id="recent" className="mt-4 max-h-[280px] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/30">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Your latest uploads and analyses</p>
+            <div id="recent" className="mt-4 max-h-[280px] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/30 dark:bg-gray-700/30">
               {analyses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+                <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 dark:text-gray-400">
                   <p className="text-sm">No activity yet</p>
-                  <Link href="/analyze" className="mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700">
+                  <Link href="/analyze" className="mt-2 text-sm font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400">
                     Upload your first chart
                   </Link>
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-200">
+                <ul className="divide-y divide-gray-200 dark:divide-gray-600">
                   {analyses.slice(0, 8).map((a) => {
                     const symbolLabel = (a.symbol && a.symbol.trim()) ? a.symbol.trim() : "Unknown";
                     const timeframeLabel = a.timeframe ? ` (${a.timeframe})` : "";
                     const title = `AI Analysis Complete - ${symbolLabel}${timeframeLabel}`;
                     return (
                       <li key={a.id}>
-                        <Link href={`/analysis/${a.id}`} className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50">
+                        <Link href={`/analysis/${a.id}`} className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900">{title}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">{formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{title}</p>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}</p>
                           </div>
-                          <span className="shrink-0 text-gray-400">→</span>
+                          <span className="shrink-0 text-gray-400 dark:text-gray-500">→</span>
                         </Link>
                       </li>
                     );
@@ -254,43 +250,43 @@ export default async function DashboardPage() {
 
         {/* Quick Actions */}
         <section className="px-4 pb-8 sm:px-6">
-          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-          <p className="mt-1 text-sm text-gray-500">Common tasks you might want to perform</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quick Actions</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Common tasks you might want to perform</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3 sm:gap-4">
             <Link
               href="/analyze"
-              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm transition hover:border-emerald-200 dark:hover:border-emerald-700 hover:shadow-md active:bg-gray-50 dark:active:bg-gray-700 sm:p-5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
                 <CardIcon icon="upload" />
               </div>
-              <span className="font-medium text-gray-900">Upload Chart</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">Upload Chart</span>
             </Link>
             <Link
               href="/subscribe"
-              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm transition hover:border-emerald-200 dark:hover:border-emerald-700 hover:shadow-md active:bg-gray-50 dark:active:bg-gray-700 sm:p-5"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
                 <CardIcon icon="chat" />
               </div>
-              <span className="font-medium text-gray-900">Plans & Support</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">Plans & Support</span>
             </Link>
             <Link
               href="/history"
-              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md active:bg-gray-50 sm:p-5"
+              className="flex min-h-[56px] items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm transition hover:border-emerald-200 dark:hover:border-emerald-700 hover:shadow-md active:bg-gray-50 dark:active:bg-gray-700 sm:p-5"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
                 <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <span className="font-medium text-gray-900">View History</span>
+              <span className="font-medium text-gray-900 dark:text-gray-100">View History</span>
             </Link>
           </div>
         </section>
 
         {/* Footer disclaimer */}
-        <footer className="border-t border-gray-200 bg-white px-4 py-4 sm:px-6">
+        <footer className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-4 sm:px-6">
           <Disclaimer />
         </footer>
       </main>

@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SessionProvider } from "@/components/SessionProvider";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { GoogleTagManagerNoscript, GoogleTagManagerScript } from "@/components/GoogleTagManager";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -36,20 +37,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="preload" href="/images/logo.svg" as="image" />
       </head>
       <body
-        className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-gray-50 text-gray-900`}
+        className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100`}
       >
         <GoogleTagManagerScript />
         <GoogleTagManagerNoscript />
-        <SessionProvider>{children}</SessionProvider>
-        <GoogleAnalytics />
-        <SpeedInsights />
-        <Analytics />
+        <ThemeProvider>
+          <SessionProvider>{children}</SessionProvider>
+          <GoogleAnalytics />
+          <SpeedInsights />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );

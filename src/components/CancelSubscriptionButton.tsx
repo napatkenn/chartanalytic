@@ -32,7 +32,7 @@ export function CancelSubscriptionButton() {
         type="button"
         onClick={() => setShowModal(true)}
         disabled={loading}
-        className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+        className="rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-gray-800 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-900/30 disabled:opacity-50"
       >
         Cancel subscription
       </button>
@@ -40,9 +40,9 @@ export function CancelSubscriptionButton() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => !loading && setShowModal(false)} aria-hidden />
-          <div className="relative w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-gray-900">Cancel subscription?</h3>
-            <p className="mt-2 text-sm text-gray-600">
+          <div className="relative w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cancel subscription?</h3>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               You will keep full access until the current period ends, then it will not renew.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 justify-end">
@@ -58,7 +58,7 @@ export function CancelSubscriptionButton() {
                 type="button"
                 onClick={() => !loading && setShowModal(false)}
                 disabled={loading}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
               >
                 Keep subscription
               </button>

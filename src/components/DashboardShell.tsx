@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const STORAGE_KEY = "chartanalytic-sidebar-collapsed";
 
@@ -85,16 +86,19 @@ export function DashboardShell({
         isMobile={isMobile}
       />
       {isMobile && (
-        <div className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center gap-3 border-b border-gray-200 bg-white px-4 safe-area-inset-top md:hidden">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100"
-            aria-label="Open menu"
-          >
-            <MenuIcon className="h-6 w-6" />
-          </button>
-          <span className="truncate text-lg font-bold tracking-tight text-gray-900">Chart<span className="text-emerald-500">A</span>nalytic</span>
+        <div className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 safe-area-inset-top dark:border-gray-700 dark:bg-gray-900 md:hidden">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+              aria-label="Open menu"
+            >
+              <MenuIcon className="h-6 w-6" />
+            </button>
+            <span className="truncate text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">Chart<span className="text-emerald-500">A</span>nalytic</span>
+          </div>
+          <ThemeToggle />
         </div>
       )}
       <div className={collapsed ? "pl-0 pt-14 md:pt-0 md:pl-16" : "pl-0 pt-14 md:pt-0 md:pl-56"}>

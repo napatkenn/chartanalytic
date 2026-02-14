@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { AnalyzeClient } from "@/components/AnalyzeClient";
 import { Disclaimer } from "@/components/Disclaimer";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Analyze — ChartAnalytic",
@@ -17,14 +18,15 @@ export default async function AnalyzePage() {
 
   return (
     <>
-      <header className="flex h-14 items-center justify-between border-b border-gray-200 bg-white px-6">
-        <p className="text-sm text-gray-500">Analyze</p>
+      <header className="flex h-14 items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-6">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Analyze</p>
+        <ThemeToggle />
       </header>
       <main className="mx-auto max-w-6xl px-6 py-8">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Chart analysis</h1>
-            <p className="mt-1 text-gray-500">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 sm:text-3xl">Chart analysis</h1>
+            <p className="mt-1 text-gray-500 dark:text-gray-400">
               Upload a chart with multi-timeframe support (PNG, JPEG, or WebP · max 10MB).
             </p>
           </div>
