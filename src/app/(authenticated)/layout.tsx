@@ -7,7 +7,6 @@ import { prisma } from "@/lib/db";
 import { DashboardShell } from "@/components/DashboardShell";
 import { SubscriptionSuccessTracker } from "@/components/SubscriptionSuccessTracker";
 import { TrialOfferPopup } from "@/components/TrialOfferPopup";
-import { OutOfCreditsBanner } from "@/components/OutOfCreditsBanner";
 
 export default async function AuthenticatedLayout({
   children,
@@ -33,15 +32,10 @@ export default async function AuthenticatedLayout({
       ? { remaining: uploadsToday.remaining, limit: uploadsToday.limit }
       : null;
 
-  // Lock only when they used their trial and now have 0 credits (new users see trial popup instead)
-  const showOutOfCreditsLock =
-    !hasSubscription && credits === 0 && user?.trialActivatedAt != null;
-
   return (
     <div className="min-h-screen bg-white">
       <SubscriptionSuccessTracker />
       <TrialOfferPopup />
-      <OutOfCreditsBanner show={showOutOfCreditsLock} />
       <DashboardShell
         user={session.user}
         credits={credits}
