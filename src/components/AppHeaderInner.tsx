@@ -1,5 +1,6 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -29,7 +30,7 @@ export function AppHeaderInner({
   session: { user?: { email?: string | null } } | null;
   activePath: string;
   mobileMenuOpen: boolean;
-  setMobileMenuOpen: (fn: (o: boolean) => boolean) => void;
+  setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
   resolvedTheme: string | undefined;
 }) {
   return (
