@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: HomeIcon },
   { href: "/analyze", label: "Analyze", icon: LinkIcon },
   { href: "/history", label: "History", icon: ClockIcon },
-  { href: "/portfolio", label: "Portfolio", icon: ChartIcon, comingSoon: true },
+  { href: "/portfolio", label: "Portfolio", icon: ChartIcon },
   { href: "/support", label: "Support", icon: SupportIcon },
 ];
 
