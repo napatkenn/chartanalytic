@@ -66,7 +66,7 @@ async function runOne(schedule, options = {}) {
 
   if (doPredict && schedule.polymarketAsset && analysis) {
     if (!polymarket.isConfigured()) {
-      console.warn(`[${schedule.id}] Polymarket not configured (POLYMARKET_PRIVATE_KEY); skipping prediction.`);
+      console.warn(`[${schedule.id}] Polymarket not configured. Set POLYMARKET_PRIVATE_KEY in Render Dashboard → chart-polymarket → Environment (not in .env; .env is not deployed).`);
     } else {
       console.log(`[${schedule.id}] Placing Polymarket prediction...`);
       try {
@@ -125,6 +125,9 @@ async function main() {
       schedules = getSchedulesForPolymarket();
       if (schedules.length) {
         console.log("Polymarket mode: running", schedules.map((s) => s.id).join(", "));
+        if (!polymarket.isConfigured()) {
+          console.warn("POLYMARKET_PRIVATE_KEY not set. Set it in Render Dashboard → chart-polymarket → Environment (env from .env is not deployed).");
+        }
       }
     } else {
       schedules = getSchedulesForHour(utcHour);

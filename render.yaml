@@ -1,9 +1,8 @@
 # Render Blueprint: two cron jobs — (1) Polymarket only, (2) Social (forex) only.
 #
-# Set env vars in each cron service (or in Render Dashboard):
-#   OPENAI_API_KEY (for analysis)
-#   X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET (for social cron only)
-#   POLYMARKET_PRIVATE_KEY (for Polymarket cron only)
+# Set env vars in Render Dashboard → each cron service → Environment:
+#   chart-polymarket: OPENAI_API_KEY, POLYMARKET_PRIVATE_KEY (0x...). .env is NOT deployed; add vars here.
+#   chart-social-agent: OPENAI_API_KEY, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 #
 # Chrome for Puppeteer is installed in build so both crons can capture/screenshot.
 
@@ -14,8 +13,8 @@ services:
     runtime: node
     plan: starter
     schedule: "0,15,30,45 * * * *"
-    buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
-    startCommand: node social-agent/run.js --predict
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer node social-agent/run.js --predict
 
   # 2) Social: EUR/USD, GBP/USD, XAU/USD, USD/JPY, AUD/USD at their hours. Posts to X.
   - type: cron
@@ -23,5 +22,5 @@ services:
     runtime: node
     plan: starter
     schedule: "0 7,12,15,17,20 * * *"
-    buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
-    startCommand: node social-agent/run.js
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer node social-agent/run.js

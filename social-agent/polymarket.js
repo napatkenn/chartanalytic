@@ -7,7 +7,26 @@
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_HOST = "https://clob.polymarket.com";
+const GEOBLOCK_URL = "https://polymarket.com/api/geoblock";
 const CHAIN_ID = 137; // Polygon
+
+/**
+ * Check if the current IP is geoblocked by Polymarket (no trading).
+ * @returns {Promise<{ blocked: boolean, country?: string, region?: string }>}
+ */
+async function checkGeoblock() {
+  try {
+    const res = await fetch(GEOBLOCK_URL);
+    const data = await res.json().catch(() => ({}));
+    return {
+      blocked: Boolean(data.blocked),
+      country: data.country,
+      region: data.region,
+    };
+  } catch {
+    return { blocked: false };
+  }
+}
 
 const ASSET_SEARCH_QUERIES = {
   btc: "Bitcoin",
@@ -274,7 +293,8 @@ async function findCryptoMarket(assetKey) {
  * Get CLOB client (ethers Wallet + Polymarket API creds). Uses dynamic import for ESM deps.
  */
 async function getClient() {
-  const privateKey = process.env.POLYMARKET_PRIVATE_KEY;
+  const raw = process.env.POLYMARKET_PRIVATE_KEY;
+  const privateKey = typeof raw === "string" ? raw.trim() : "";
   if (!privateKey || !privateKey.startsWith("0x")) {
     throw new Error("POLYMARKET_PRIVATE_KEY (0x...) is required for predictions.");
   }
@@ -357,6 +377,14 @@ async function placePrediction(schedule, analysis, options = {}) {
     };
   }
 
+  const geo = await checkGeoblock();
+  if (geo.blocked) {
+    return {
+      placed: false,
+      message: `Trading restricted in your region (${geo.country || "unknown"}). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+    };
+  }
+
   const { client, Side, OrderType } = await getClient();
 
   let marketInfo;
@@ -384,18 +412,39 @@ async function placePrediction(schedule, analysis, options = {}) {
       OrderType.GTC
     );
 
+    const orderId = response?.orderID ?? response?.orderId;
+    if (!orderId) {
+      return {
+        placed: false,
+        message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+      };
+    }
+
     return {
       placed: true,
-      orderId: response?.orderID,
-      message: `Placed ${sideInfo.side} $${size} on "${market.question}" (order ${response?.orderID || "ok"}).`,
+      orderId,
+      message: `Placed ${sideInfo.side} $${size} on "${market.question}" (order ${orderId}).`,
     };
   } catch (err) {
-    return { placed: false, message: `Order failed: ${err.message}.` };
+    const status = err.response?.status ?? err.status;
+    const body = err.response?.data ?? err.data;
+    const apiError = typeof body?.error === "string" ? body.error : err.message;
+    if (status === 403 || (apiError && apiError.toLowerCase().includes("restricted"))) {
+      return {
+        placed: false,
+        message: `Trading restricted in your region (geoblock). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+      };
+    }
+    if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
+      return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
+    }
+    return { placed: false, message: `Order failed: ${apiError || err.message}.` };
   }
 }
 
 function isConfigured() {
-  const key = process.env.POLYMARKET_PRIVATE_KEY;
+  const raw = process.env.POLYMARKET_PRIVATE_KEY;
+  const key = typeof raw === "string" ? raw.trim() : "";
   return Boolean(key && key.startsWith("0x"));
 }
 
@@ -408,4 +457,5 @@ module.exports = {
   placePrediction,
   isConfigured,
   analysisToSide,
+  checkGeoblock,
 };
