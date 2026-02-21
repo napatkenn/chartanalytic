@@ -99,6 +99,10 @@ Uploaded chart images must be stored in **persistent storage** on Vercel; the se
 
 Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from a CDN (e.g. a custom domain in front of Blob).
 
+## Scheduled jobs (social agent)
+
+The **social agent** (TradingView capture, analysis, X posts, Polymarket predictions) runs on a schedule via **GitHub Actions**. No Render or Fly.io. Add the required secrets in the repo under **Settings → Secrets and variables → Actions** and push; workflows run at :00/:15/:30/:45 UTC (Polymarket) and 7/12/15/17/20 UTC (forex). See [social-agent/README.md](./social-agent/README.md) and `.github/workflows/*.yml`.
+
 ### If you get 404 on the root URL or other pages
 
 1. **Deployment Protection** — In Vercel: Project → **Settings** → **Deployment Protection**. If **Vercel Authentication** (or password protection) is enabled, unauthenticated visitors get 401/redirect and can see 404 in some flows. For a public site, turn protection **Off** for Production (or use “Only Preview” and keep Production public).

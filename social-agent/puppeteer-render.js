@@ -1,5 +1,5 @@
 /**
- * On Fly.io / ephemeral cron, the filesystem may not have .cache from build.
+ * On ephemeral runners (e.g. GitHub Actions), the filesystem may not have .cache from build.
  * We point Puppeteer at project .cache and, if Chrome is missing, install it at runtime.
  */
 const path = require("path");
@@ -26,7 +26,7 @@ function findChromeInCache(cacheDir) {
   return null;
 }
 
-/** Install Chrome into cacheDir if missing (for ephemeral fs, e.g. Fly.io). */
+/** Install Chrome into cacheDir if missing (for ephemeral fs, e.g. GitHub Actions). */
 function installChromeIfNeeded(cacheDir, projectRoot) {
   if (process.env.PUPPETEER_SKIP_RUNTIME_INSTALL === "true") return;
   if (process.platform !== "linux") return;

@@ -96,17 +96,20 @@ Targets: 1.1940 → 1.1810
 #forex #trading #fx #technicalanalysis #forexsignals
 ```
 
-## Running on Fly.io (cron) — machines only at schedule time
+## Running on GitHub Actions (scheduled cron)
 
-The repo uses **[Fly Cron Manager](https://github.com/fly-apps/cron-manager)**: a machine starts only when a job is due, runs the command, then exits (no 24/7 process). See [task scheduling](https://fly.io/docs/blueprints/task-scheduling/).
+Scheduled runs use **GitHub Actions** so no server runs 24/7.
 
-1. **Deploy the image:** `flyctl deploy` then `flyctl scale count 0` (keeps the image in the registry, zero machines running).
-2. **Secrets:** `flyctl secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...` (and X_* for social).
-3. **Deploy Cron Manager:** Clone [cron-manager](https://github.com/fly-apps/cron-manager), copy `cron-manager/schedules.json` from this repo, set `FLY_API_TOKEN`, deploy. See **cron-manager/README.md** in this repo.
+1. **Secrets:** In the repo go to **Settings → Secrets and variables → Actions**. Add:
+   - **Polymarket workflow:** `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`; optional: `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`, **`PROXY_URL`** or **`PROXY_LIST_URL`** (see geoblock note below), `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
+   - **Social workflow:** `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`; optional: `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
+2. **Schedules:** Workflows run on schedule (and can be triggered manually from the **Actions** tab). **Polymarket:** every 15 min (:00, :15, :30, :45 UTC). **Social:** 7, 12, 15, 17, 20 UTC.
 
-Schedules: **:00, :15, :30, :45** UTC → Polymarket; **7, 12, 15, 17, 20** UTC → Social. The Docker image uses system Chromium; no Chrome download at runtime.
+**Polymarket geoblock:** GitHub runners are often in the US; [Polymarket blocks orders from the US and other regions](https://docs.polymarket.com/api-reference/geoblock). Use **`PROXY_URL`** (single HTTP proxy) or **`PROXY_LIST_URL`** (URL of a text file with `host:port` per line; the app tries each until one passes the geoblock check). Only **HTTP** proxies are supported (not SOCKS). See **[CRON-GEOBLOCK.md](../CRON-GEOBLOCK.md)** for options (proxy list, self-hosted runner, free VPS cron).
 
-## Scheduling (cron / Task Scheduler)
+See **.github/workflows/polymarket-cron.yml** and **.github/workflows/social-cron.yml**.
+
+## Scheduling (local cron / Task Scheduler)
 
 **Linux/macOS (cron) — every 15 min for crypto + forex at their hours:**
 ```cron

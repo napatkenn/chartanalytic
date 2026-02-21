@@ -35,7 +35,7 @@ async function analyzeImageViaApp(imagePath, _options = {}) {
     const isBlocked = res.status === 429 || (text && text.includes("Vercel Security Checkpoint"));
     if (isBlocked) {
       throw new Error(
-        "Chart Analytic API blocked (429 / Vercel Security Checkpoint). Set OPENAI_API_KEY on Fly (or your host) so the cron uses OpenAI directly and does not call Vercel."
+        "Chart Analytic API blocked (429 / Vercel Security Checkpoint). Set OPENAI_API_KEY (e.g. in GitHub Actions secrets or .env) so the cron uses OpenAI directly and does not call Vercel."
       );
     }
     let err;
@@ -97,7 +97,7 @@ async function analyzeImageOpenAI(imagePath, options = {}) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "OPENAI_API_KEY is not set. Either set OPENAI_API_KEY (e.g. Fly secrets), or use Chart Analytic app by setting CHART_ANALYTIC_URL and ANALYZE_IMAGE_SECRET."
+      "OPENAI_API_KEY is not set. Either set OPENAI_API_KEY (e.g. GitHub Actions secrets or .env), or use Chart Analytic app by setting CHART_ANALYTIC_URL and ANALYZE_IMAGE_SECRET."
     );
   }
 

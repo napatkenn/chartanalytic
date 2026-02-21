@@ -1,0 +1,34 @@
+# Social agent: capture forex charts and post to X at 7, 12, 15, 17, 20 UTC.
+name: Social cron
+
+on:
+  schedule:
+    - cron: "0 7,12,15,17,20 * * *"
+  workflow_dispatch:
+
+jobs:
+  social:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
+      X_API_SECRET: ${{ secrets.X_API_SECRET }}
+      X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+      X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+      CHART_ANALYTIC_URL: ${{ secrets.CHART_ANALYTIC_URL }}
+      ANALYZE_IMAGE_SECRET: ${{ secrets.ANALYZE_IMAGE_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run social pipeline
+        run: node social-agent/run.js

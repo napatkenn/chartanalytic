@@ -143,79 +143,96 @@ function getSlugOverride(assetKey) {
   return null;
 }
 
+/** Return true if market end time is in the future (still open for trading). */
+function isMarketEndInFuture(market) {
+  const end = market.endDateIso;
+  if (!end) return true;
+  return new Date(end).getTime() > Date.now();
+}
+
 /**
  * Find an active 15-minute up/down market for the asset (preferred for our 15-min bot).
- * 1) Tries GET /markets/slug/{slug} for known 15m slugs (btc-updown-15m, eth-updown-15m, sol-updown-15m, xrp-updown-15m).
- * 2) Optional POLYMARKET_MARKET_SLUGS env: comma-separated "btc:slug1,eth:slug2" or ordered "slug1,slug2,slug3,slug4".
- * 3) Falls back to event listing (slug prefix match, pick by nearest end time).
+ * Prefers current/next 15m window (from event listing) so we don't use expired slugs.
+ * 1) Event listing: active 15m events for this asset, pick market with nearest future end time.
+ * 2) Optional POLYMARKET_MARKET_SLUGS: if set, try that slug first (for manual override).
+ * 3) Fallback: try default ASSET_15M_SLUGS only if end time is still in the future.
  */
 async function findCryptoMarket15Min(assetKey) {
-  // 1) Slug-based discovery (GET /markets/slug/{slug}) — https://docs.polymarket.com/api-reference/markets/get-market-by-slug
-  const slugOverride = getSlugOverride(assetKey);
-  const slugToTry = slugOverride || ASSET_15M_SLUGS[assetKey];
-  if (slugToTry) {
-    const bySlug = await fetchMarketBySlug(slugToTry);
-    if (bySlug) return bySlug;
-    const byEvent = await fetchEventBySlug(slugToTry);
-    if (byEvent) return byEvent;
-  }
-
   const prefix = ASSET_15M_SLUG_PREFIXES[assetKey];
   if (!prefix) return null;
 
-  const res = await fetch(
-    `${GAMMA_API}/events?active=true&closed=false&limit=100`
-  );
-  if (!res.ok) return null;
-  const events = await res.json();
-
-  const now = new Date();
+  const now = Date.now();
   let best = null;
   let bestEnd = Infinity;
 
-  for (const event of events) {
-    const slug = (event.slug || "").toLowerCase();
-    if (!slug.includes("15m") || !slug.includes("updown")) continue;
-    if (!slug.includes(prefix)) continue;
-
-    const markets = event.markets || [];
-    for (const m of markets) {
-      const out = marketFromEventMarket(event, m);
-      if (!out) continue;
-      const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
-      if (endMs > now.getTime() && endMs < bestEnd) {
-        bestEnd = endMs;
-        best = out;
+  // 1) Prefer event listing so we get the current/next window (orderbook still open)
+  const res = await fetch(
+    `${GAMMA_API}/events?active=true&closed=false&limit=100`
+  );
+  if (res.ok) {
+    const events = await res.json();
+    for (const event of events) {
+      const slug = (event.slug || "").toLowerCase();
+      if (!slug.includes("15m") || !slug.includes("updown")) continue;
+      if (!slug.startsWith(prefix)) continue;
+      const markets = event.markets || [];
+      for (const m of markets) {
+        const out = marketFromEventMarket(event, m);
+        if (!out) continue;
+        const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
+        if (endMs > now && endMs < bestEnd) {
+          bestEnd = endMs;
+          best = out;
+        }
       }
+      if (best) break;
     }
-    if (best) break;
   }
 
   if (best) return best;
 
-  // Try public-search for "Bitcoin 15 minute" / "15m up down" style markets
+  // 2) POLYMARKET_MARKET_SLUGS override (manual slug for current window)
+  const slugOverride = getSlugOverride(assetKey);
+  if (slugOverride) {
+    const bySlug = await fetchMarketBySlug(slugOverride);
+    if (bySlug && isMarketEndInFuture(bySlug)) return bySlug;
+    const byEvent = await fetchEventBySlug(slugOverride);
+    if (byEvent && isMarketEndInFuture(byEvent)) return byEvent;
+  }
+
+  // 3) Default slug only if its market end is still in the future
+  const slugToTry = ASSET_15M_SLUGS[assetKey];
+  if (slugToTry) {
+    const bySlug = await fetchMarketBySlug(slugToTry);
+    if (bySlug && isMarketEndInFuture(bySlug)) return bySlug;
+    const byEvent = await fetchEventBySlug(slugToTry);
+    if (byEvent && isMarketEndInFuture(byEvent)) return byEvent;
+  }
+
+  // 4) Public search for "Bitcoin 15 minute" etc.
   const q = `${ASSET_SEARCH_QUERIES[assetKey] || assetKey} 15 minute`;
   const searchRes = await fetch(
     `${GAMMA_API}/public-search?q=${encodeURIComponent(q)}&events_status=open&limit_per_type=10`
   );
-  if (!searchRes.ok) return null;
-  const data = await searchRes.json();
-  const searchEvents = data.events || [];
-  for (const event of searchEvents) {
-    const slug = (event.slug || "").toLowerCase();
-    const title = (event.title || "").toLowerCase();
-    if (!slug.includes("15m") && !title.includes("15 min")) continue;
-    const markets = event.markets || [];
-    for (const m of markets) {
-      const out = marketFromEventMarket(event, m);
-      if (!out) continue;
-      const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
-      if (endMs > now.getTime() && endMs < bestEnd) {
-        bestEnd = endMs;
-        best = out;
+  if (searchRes.ok) {
+    const data = await searchRes.json();
+    const searchEvents = data.events || [];
+    for (const event of searchEvents) {
+      const slug = (event.slug || "").toLowerCase();
+      const title = (event.title || "").toLowerCase();
+      if (!slug.includes("15m") && !title.includes("15 min")) continue;
+      const markets = event.markets || [];
+      for (const m of markets) {
+        const out = marketFromEventMarket(event, m);
+        if (!out) continue;
+        const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
+        if (endMs > now && endMs < bestEnd) {
+          bestEnd = endMs;
+          best = out;
+        }
       }
+      if (best) break;
     }
-    if (best) break;
   }
   return best;
 }
@@ -291,6 +308,8 @@ async function findCryptoMarket(assetKey) {
 
 /**
  * Get CLOB client (ethers Wallet + Polymarket API creds). Uses dynamic import for ESM deps.
+ * - If POLYMARKET_API_KEY + POLYMARKET_API_SECRET + POLYMARKET_PASSPHRASE are set, use those (from Polymarket UI).
+ * - Otherwise derive existing key first (avoids 400 "Could not create api key"), then create only if none exists.
  */
 async function getClient() {
   const raw = process.env.POLYMARKET_PRIVATE_KEY;
@@ -309,10 +328,33 @@ async function getClient() {
   const OrderType = clobModule.OrderType ?? clobModule.default?.OrderType;
 
   const signer = new ethers.Wallet(privateKey);
-  const tempClient = new ClobClient(CLOB_HOST, CHAIN_ID, signer);
-  const apiCreds = await tempClient.createOrDeriveApiKey();
-  const client = new ClobClient(CLOB_HOST, CHAIN_ID, signer, apiCreds, 0, signer.address);
+  let apiCreds;
 
+  const apiKey = (process.env.POLYMARKET_API_KEY || "").trim();
+  const secret = (process.env.POLYMARKET_API_SECRET || "").trim();
+  const passphrase = (process.env.POLYMARKET_PASSPHRASE || "").trim();
+  if (apiKey && secret && passphrase) {
+    apiCreds = { apiKey, secret, passphrase, key: apiKey };
+  } else {
+    const tempClient = new ClobClient(CLOB_HOST, CHAIN_ID, signer);
+    let derived = null;
+    try {
+      derived = await tempClient.deriveApiKey();
+    } catch (_) {}
+    if (derived && (derived.apiKey || derived.key)) {
+      apiCreds = derived;
+      if (!apiCreds.apiKey) apiCreds.apiKey = apiCreds.key;
+    } else {
+      try {
+        apiCreds = await tempClient.createApiKey();
+      } catch (_) {
+        apiCreds = await tempClient.createOrDeriveApiKey();
+      }
+      if (apiCreds && !apiCreds.apiKey) apiCreds.apiKey = apiCreds.key;
+    }
+  }
+
+  const client = new ClobClient(CLOB_HOST, CHAIN_ID, signer, apiCreds, 0, signer.address);
   return { client, Side, OrderType };
 }
 
@@ -437,6 +479,9 @@ async function placePrediction(schedule, analysis, options = {}) {
     }
     if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
       return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
+    }
+    if (status === 400 && (apiError || "").toLowerCase().includes("orderbook") && (apiError || "").toLowerCase().includes("does not exist")) {
+      return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window.` };
     }
     return { placed: false, message: `Order failed: ${apiError || err.message}.` };
   }
