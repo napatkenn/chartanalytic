@@ -1,11 +1,10 @@
-# Fly.io app for chartanalytic social-agent cron.
+# Fly.io app for chartanalytic social-agent cron (Supercronic).
+# https://fly.io/docs/blueprints/supercronic/
 #
-# First time: fly launch  (creates app, use Dockerfile.cron)
-# Set secrets: fly secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...
-# Run once:    fly run node social-agent/run.js --predict
-# Schedule:    Use Fly Cron Manager (fly.io/docs/blueprints/task-scheduling/) or
-#              external cron (e.g. cron-job.org) to run: fly run node social-agent/run.js --predict
-#              at :00, :15, :30, :45 for Polymarket; at 7,12,15,17,20 UTC for Social.
+# First time: fly launch  (use Dockerfile.cron)
+# Secrets:    fly secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...
+# Deploy:     fly deploy
+# Scale:      fly scale count cron=1   (only one cron process)
 
 app = "chartanalytic-cron"
 
@@ -14,3 +13,6 @@ app = "chartanalytic-cron"
 
 [env]
   NODE_ENV = "production"
+
+[processes]
+  cron = "supercronic /app/crontab"

@@ -1,9 +1,16 @@
-# Fly.io (or any Docker host) cron image: Node + Puppeteer Chrome for social-agent.
-# Build: docker build -f Dockerfile.cron -t chartanalytic-cron .
-# Run Polymarket: docker run --env-file .env chartanalytic-cron node social-agent/run.js --predict
-# Run Social:      docker run --env-file .env chartanalytic-cron node social-agent/run.js
+# Fly.io cron image: Node + Chromium + Supercronic for social-agent.
+# See https://fly.io/docs/blueprints/supercronic/
 
 FROM node:20-bookworm-slim
+
+# Supercronic (cron for containers); https://github.com/aptible/supercronic/releases
+ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
+    SUPERCRONIC=supercronic-linux-amd64 \
+    SUPERCRONIC_SHA1SUM=cd48d45c4b10f3f0bfdd3a57d054cd05ac96812b
+RUN curl -fsSLO "$SUPERCRONIC_URL" \
+    && echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - \
+    && chmod +x "$SUPERCRONIC" \
+    && mv "$SUPERCRONIC" /usr/local/bin/supercronic
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -34,10 +41,12 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev && rm -rf /root/.npm
 
 COPY . .
+COPY crontab /app/crontab
 # Prisma (if present)
 RUN npx prisma generate 2>/dev/null || true
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-CMD ["node", "social-agent/run.js", "--predict"]
+# Run Supercronic so crontab runs at :00, :15, :30, :45 (Polymarket) and 7,12,15,17,20 UTC (Social).
+CMD ["supercronic", "/app/crontab"]

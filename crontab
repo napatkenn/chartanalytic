@@ -1,0 +1,5 @@
+# Chartanalytic social-agent cron (UTC).
+# Polymarket: BTC/ETH/SOL/XRP every 15 min.
+0,15,30,45 * * * * cd /app && node social-agent/run.js --predict
+# Social (forex): EUR/USD, GBP/USD, etc. at 7, 12, 15, 17, 20 UTC.
+0 7,12,15,17,20 * * * cd /app && node social-agent/run.js
