@@ -18,13 +18,14 @@ Free tier limits apply (e.g. 200 tweets per 15 min per user). Tweet text is trun
 
 ## Schedule (UTC)
 
-| Time (UTC) | Pair    | Timeframe | Chart URL |
-|------------|---------|-----------|-----------|
-| 07:00      | EUR/USD | 1H        | [TradingView](https://www.tradingview.com/chart/?symbol=FX:EURUSD&interval=60) |
-| 12:00      | GBP/USD | 15m       | [TradingView](https://www.tradingview.com/chart/?symbol=FX:GBPUSD&interval=15) |
-| 15:00      | XAU/USD | 15m       | [TradingView](https://www.tradingview.com/chart/?symbol=OANDA:XAUUSD&interval=15) |
-| 17:00      | USD/JPY | 1H        | [TradingView](https://www.tradingview.com/chart/?symbol=FX:USDJPY&interval=60) |
-| 20:00      | AUD/USD | 4H        | [TradingView](https://www.tradingview.com/chart/?symbol=OANDA:AUDUSD&interval=240) |
+| Time (UTC)     | Pair     | Timeframe | Frequency   |
+|----------------|----------|-----------|-------------|
+| 07:00          | EUR/USD  | 1H        | once        |
+| 12:00          | GBP/USD  | 15m       | once        |
+| 15:00          | XAU/USD  | 15m       | once        |
+| 17:00          | USD/JPY  | 1H        | once        |
+| 20:00          | AUD/USD  | 4H        | once        |
+| **:00, :15, :30, :45** | BTC/USDT, ETH/USDT, SOL/USDT | 1M | **every 15 min** (Polymarket) |
 
 ## Requirements
 
@@ -65,6 +66,10 @@ node social-agent/run.js
 
 # Run a single schedule by id
 node social-agent/run.js eurusd
+node social-agent/run.js btc
+node social-agent/run.js eth
+node social-agent/run.js sol
+node social-agent/run.js xrp
 node social-agent/run.js gbpusd
 node social-agent/run.js xauusd
 node social-agent/run.js usdjpy
@@ -75,6 +80,10 @@ node social-agent/run.js eurusd --no-analyze
 
 # Test full flow without posting (capture + analyze + show post text)
 node social-agent/run.js eurusd --dry-run
+
+# Crypto 1M: capture + analyze + (optional) place prediction on Polymarket
+node social-agent/run.js btc --predict
+node social-agent/run.js eth --predict --dry-run   # dry-run: no X post, no real Polymarket order
 ```
 
 **Post format (X):** Short, high-impact forex post with symbol | timeframe, bias (%), key level line, targets, and 3–5 forex hashtags. Example:
@@ -89,7 +98,12 @@ Targets: 1.1940 → 1.1810
 
 ## Running on Render (cron)
 
-The repo includes a **Blueprint** (`render.yaml`) for a Render cron job. The build runs `npx puppeteer browsers install chrome` so Chrome is available when the cron runs.
+The repo includes a **Blueprint** (`render.yaml`) for a Render cron job that runs **every 15 minutes** (`0,15,30,45 * * * *`). Each run:
+
+- At **:00, :15, :30, :45**: captures BTC, ETH, SOL 1m charts, runs analysis, posts to X (if configured), and places Polymarket predictions (with `--predict`).
+- When the current UTC hour matches a forex schedule (7, 12, 15, 17, 20), that pair is also run in the same cron run.
+
+The build runs `npx puppeteer browsers install chrome` so Chrome is available when the cron runs.
 
 If you still see **"Could not find Chrome"** on Render:
 
@@ -99,20 +113,71 @@ If you still see **"Could not find Chrome"** on Render:
 
 ## Scheduling (cron / Task Scheduler)
 
-**Linux/macOS (cron):**
+**Linux/macOS (cron) — every 15 min for crypto + forex at their hours:**
 ```cron
-0 7 * * *  cd /path/to/chartanalytic && node social-agent/run.js
-0 12 * * * cd /path/to/chartanalytic && node social-agent/run.js
-0 15 * * * cd /path/to/chartanalytic && node social-agent/run.js
-0 17 * * * cd /path/to/chartanalytic && node social-agent/run.js
-0 20 * * * cd /path/to/chartanalytic && node social-agent/run.js
+0,15,30,45 * * * *  cd /path/to/chartanalytic && node social-agent/run.js --predict
 ```
 
-**Windows (Task Scheduler):** Create five tasks for 07:00, 12:00, 15:00, 17:00, 20:00 UTC, action: `node C:\path\to\chartanalytic\social-agent\run.js`.
+**Windows (Task Scheduler):** Create a task that runs every 15 minutes (e.g. at :00, :15, :30, :45), action: `node C:\path\to\chartanalytic\social-agent\run.js --predict`.
+
+## Polymarket prediction bot (optional)
+
+For **BTC**, **ETH**, and **SOL** 1-minute schedules you can place predictions on [Polymarket](https://polymarket.com) based on the chart analysis (bullish/bearish + confidence).
+
+1. **Wallet:** Create or use an Ethereum wallet; fund it with **USDC.e on Polygon** (and a little POL for gas). Export the **private key** (0x...).
+2. **Env:** In `.env` set:
+   - `POLYMARKET_PRIVATE_KEY=0x...` (required to place orders)
+   - `POLYMARKET_MIN_CONFIDENCE=65` (optional; default 65 — only predict when analysis confidence ≥ this)
+   - `POLYMARKET_MAX_SIZE_USD=10` (optional; max $ per order)
+3. **Run:** Use `--predict` when running a crypto schedule so that after analysis the bot looks up a matching Polymarket market (e.g. “Bitcoin”) and places a limit order: **Yes** if bullish, **No** if bearish (skips if bias is “range” or confidence is below threshold).
+
+The bot **prefers 15-minute “Up or Down” markets** for Bitcoin, Ethereum, Solana, and XRP. It uses [Polymarket event slugs](https://polymarket.com/event/btc-updown-15m-1771670700) (e.g. `btc-updown-15m-1771670700`): it tries GET /markets/slug/{slug}, then GET /events?slug={slug} to get the event’s market. Default slugs are set to a specific 15-min window; when that window closes, set **POLYMARKET_MARKET_SLUGS** with current slugs from the Polymarket event URLs (e.g. `btc:btc-updown-15m-1771670800,eth:eth-updown-15m-1771670800,sol:sol-updown-15m-1771670800,xrp:xrp-updown-15m-1771670800`). Run `node social-agent/test-polymarket.js` to confirm 15-min markets are found.
+
+When you use **`--predict`**, the run is **Polymarket-only**: no post to X (or other social). The AI analysis uses a **15-minute–specific prompt** (“Will price be UP or DOWN at the end of the next 15 minutes?”) so the prediction aligns with Polymarket’s 15m Up/Down markets. Example: `node social-agent/run.js btc --predict` captures the chart, runs the 15m analysis, and places a Polymarket order when confidence is high enough. Use `--dry-run` to test without placing real orders. **15-min prompt requires OPENAI_API_KEY** (the Chart Analytic app API uses the general prompt).
+
+### Full Polymarket run (capture → analyze → predict)
+
+- **Dry-run (no X post, no real order):**  
+  `npm run social-agent:polymarket-dry` or  
+  `node social-agent/run.js btc --predict --dry-run`  
+  Uses Puppeteer + OpenAI (or app), captures BTC 1m chart, runs analysis, then logs what it *would* place on Polymarket. No wallet or X keys needed.
+- **Live (real order):**  
+  Set `POLYMARKET_PRIVATE_KEY` and optionally `POLYMARKET_MAX_SIZE_USD=1` in `.env`, then  
+  `npm run social-agent:polymarket` or  
+  `node social-agent/run.js btc --predict`  
+  Same flow but places a real limit order when confidence ≥ threshold. Add X API keys in `.env` if you want the chart post to X as well.
+
+### Testing the Polymarket flow
+
+1. **Market discovery only** (no API key, no wallet):
+   ```bash
+   node social-agent/test-polymarket.js
+   ```
+   Checks that Gamma API returns active Bitcoin / Ethereum / Solana markets and prints question + token IDs.
+
+2. **Full pipeline dry-run** (capture + analyze + “would place” order; no X post, no real order):
+   ```bash
+   node social-agent/run.js btc --predict --dry-run
+   ```
+   Requires Puppeteer and `OPENAI_API_KEY` (or Chart Analytic app). Runs real chart capture and AI analysis; Polymarket step is simulated.
+
+3. **Order logic dry-run** (no Puppeteer, no OpenAI; uses fake analysis):
+   ```bash
+   node social-agent/test-polymarket.js --dry
+   ```
+   Calls `placePrediction` with mock analysis in dry-run mode. No wallet needed; confirms “Would place YES/NO $X on …”.
+
+4. **Real small order** (wallet required):
+   ```bash
+   POLYMARKET_MAX_SIZE_USD=1 node social-agent/test-polymarket.js --live
+   ```
+   Or run the full pipeline and place a real order: `node social-agent/run.js btc --predict` (set `POLYMARKET_MAX_SIZE_USD=1` in `.env` for testing).
+
+**Risk:** Trading and prediction markets involve loss of capital. Use small sizes and only what you can afford to lose.
 
 ## Notes
 
-- **TradingView**: Charts are loaded in a headless browser. TradingView may rate-limit or block automated access; if captures fail, try running less frequently or with a headed browser.
+- **TradingView**: Charts are loaded in a headless browser. If you see "Navigation timeout exceeded", set `CAPTURE_NAV_TIMEOUT_MS=120000` (default 60s) or use `waitUntil: "load"` (already set; avoids TradingView’s persistent connections blocking `networkidle2`). If TradingView blocks headless access, run with a visible browser: `CAPTURE_HEADED=true node social-agent/run.js btc --predict --dry-run`.
 - **Output**: Screenshots are written to `social-agent/output/` (gitignored).
 - **X 403 on media upload**: In the [X Developer Portal](https://developer.x.com), ensure your app has **Read and write** (or **Read and write and Direct messages**) access and that the app is not in **Read only** mode. **Regenerate the Access Token** after changing permissions (old tokens do not get new permissions). If you still get 403, the script will show the API error message and will try a fallback upload format (base64); see [X 403 Forbidden discussion](https://devcommunity.x.com/t/403-forbidden-in-any-request/234743).
 

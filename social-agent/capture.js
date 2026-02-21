@@ -12,6 +12,7 @@ const fsSync = require("fs");
 
 /** Timeframe labels TradingView shows in the toolbar; we wait for one of these to be visible. */
 const TIMEFRAME_LABELS = {
+  "1M": ["1", "1m", "1M"],
   "15M": ["15", "15m", "15M"],
   "1H": ["1H", "1h", "60"],
   "4H": ["4H", "4h", "240"],
@@ -109,9 +110,16 @@ async function captureChart(url, outputPath, options = {}) {
     useScreenshotShortcut = false,
   } = options;
 
+  const launchOpts = getChromeLaunchOptions();
+  const headless = process.env.CAPTURE_HEADED === "true" ? false : true;
+  // Reduce automation detection (TradingView may block headless)
+  launchOpts.args = launchOpts.args || [];
+  if (!launchOpts.args.includes("--disable-blink-features=AutomationControlled")) {
+    launchOpts.args.push("--disable-blink-features=AutomationControlled");
+  }
   const browser = await puppeteer.launch({
-    headless: true,
-    ...getChromeLaunchOptions(),
+    headless,
+    ...launchOpts,
   });
 
   try {
@@ -133,44 +141,47 @@ async function captureChart(url, outputPath, options = {}) {
       });
     }
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
-
-    const chartSelector = '[data-name="chart-container"]';
-    await page.waitForSelector(chartSelector, { timeout: 10000 }).catch(() => null);
+    // Use "domcontentloaded" so we don't wait for all assets — TradingView is heavy and "load" can fire very late or never
+    const navTimeout = Number(process.env.CAPTURE_NAV_TIMEOUT_MS) || 90000;
+    page.setDefaultNavigationTimeout(navTimeout);
+    console.log("[capture] Loading page...");
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: navTimeout });
+    console.log("[capture] Page loaded, waiting for chart (up to 12s)...");
+    const chartWaitMs = Number(process.env.CAPTURE_CHART_WAIT_MS) || 12000;
+    const chartEl = await page.waitForSelector('[data-name="chart-container"]', { timeout: chartWaitMs }).catch(() => null);
+    if (chartEl) {
+      console.log("[capture] Chart container found.");
+    } else {
+      console.log("[capture] Chart container not found, capturing full page.");
+    }
 
     if (schedule && schedule.timeframe) {
-      const detected = await waitForTimeframe(page, schedule.timeframe, 15000);
+      const tfTimeout = 8000;
+      const detected = await waitForTimeframe(page, schedule.timeframe, tfTimeout);
       if (!detected) {
-        console.warn(
-          `[capture] Timeframe "${schedule.timeframe}" not detected in toolbar; capturing anyway.`
-        );
+        console.warn("[capture] Timeframe not detected in toolbar; capturing anyway.");
       }
     }
     await new Promise((r) => setTimeout(r, waitMs));
 
-    // On Render, extra 3s for chart to fully render before Ctrl+Alt+S (slower env)
     if (process.env.RENDER) {
-      console.log("[capture] Render: extra 3s for chart to settle before screenshot...");
+      console.log("[capture] Extra 3s for chart to settle...");
       await new Promise((r) => setTimeout(r, 3000));
     }
-    // Enter full screen (Shift+F) before programmatic screenshot so chart fills viewport
+    console.log("[capture] Full screen (Shift+F)...");
     await page.keyboard.down("Shift");
     await page.keyboard.press("f");
     await page.keyboard.up("Shift");
     await new Promise((r) => setTimeout(r, 500));
 
-    // Slight viewport nudge + scroll to encourage TradingView to sync price axis with chart (no extra delay)
-    const chartEl = await page.$(chartSelector).catch(() => null);
     if (chartEl) {
-      await page.setViewport({ width: viewportWidth + 1, height: viewportHeight, deviceScaleFactor: 2 });
-      await page.setViewport({ width: viewportWidth, height: viewportHeight, deviceScaleFactor: 2 });
       const box = await chartEl.boundingBox();
       if (box) {
         const centerX = box.x + box.width / 2;
         const centerY = box.y + box.height / 2;
         await page.mouse.move(centerX, centerY);
         await page.mouse.wheel({ deltaY: 40 });
-        await new Promise((r) => setTimeout(r, 2000));
+        await new Promise((r) => setTimeout(r, 1500));
       }
     }
 
@@ -190,12 +201,14 @@ async function captureChart(url, outputPath, options = {}) {
     }
 
 
+    console.log("[capture] Taking screenshot...");
     await page.screenshot({
       path: outputPath,
       type: "png",
     });
 
     const stat = await fs.stat(outputPath);
+    console.log("[capture] Saved", outputPath, "(" + Math.round(stat.size / 1024) + " KB)");
     return { path: outputPath, size: stat.size };
   } finally {
     await browser.close();

@@ -14,8 +14,8 @@ function normalizeAppUrl(url) {
   return `https://${u}`;
 }
 
-/** Analyze via Chart Analytic app: POST image to /api/analyze-image, same pipeline as photo upload. */
-async function analyzeImageViaApp(imagePath) {
+/** Analyze via Chart Analytic app: POST image to /api/analyze-image. Does not support forPolymarket15m (use OPENAI_API_KEY for that). */
+async function analyzeImageViaApp(imagePath, _options = {}) {
   const baseUrl = normalizeAppUrl(process.env.CHART_ANALYTIC_URL || "http://localhost:3000");
   const secret = process.env.ANALYZE_IMAGE_SECRET;
   if (!secret) throw new Error("ANALYZE_IMAGE_SECRET is not set for Chart Analytic API");
@@ -73,14 +73,36 @@ Return a structured analysis in the following JSON format only (no markdown, no 
 
 Focus on clarity and actionable levels. Use exact numbers from the chart when visible.`;
 
+const ANALYSIS_PROMPT_15M = `You are an expert technical analyst. This image is a 1-minute chart. Your task is to predict ONLY whether the price will be UP or DOWN at the end of the NEXT 15 MINUTES (higher or lower than the current/latest price on the chart).
+
+Return a structured analysis in the following JSON format only (no markdown, no code block):
+{
+  "marketBias": "bullish" | "bearish",
+  "support": ["level1", "level2"],
+  "resistance": ["level1", "level2"],
+  "entry": "current or last visible price",
+  "takeProfit": "brief",
+  "stopLoss": "brief",
+  "riskReward": "e.g. 1:1",
+  "confidence": 0-100 integer,
+  "reasoning": "2-3 sentences focused on why price will be UP or DOWN in the next 15 minutes only. Consider momentum, recent candles, and key levels.",
+  "symbol": "trading pair if visible",
+  "timeframe": "1m"
+}
+
+Rules: Use ONLY "bullish" (for UP) or "bearish" (for DOWN). Do not use "range". Confidence should reflect how sure you are about the next 15-minute direction.`;
+
 /** Analyze via OpenAI directly (same logic as main app). */
-async function analyzeImageOpenAI(imagePath) {
+async function analyzeImageOpenAI(imagePath, options = {}) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
       "OPENAI_API_KEY is not set. Either set OPENAI_API_KEY in Render, or use Chart Analytic app by setting CHART_ANALYTIC_URL and ANALYZE_IMAGE_SECRET."
     );
   }
+
+  const forPolymarket15m = Boolean(options.forPolymarket15m);
+  const systemPrompt = forPolymarket15m ? ANALYSIS_PROMPT_15M : ANALYSIS_PROMPT;
 
   const buffer = await fs.readFile(imagePath);
   const base64 = buffer.toString("base64");
@@ -92,7 +114,7 @@ async function analyzeImageOpenAI(imagePath) {
     model: "gpt-4o",
     max_tokens: 800,
     messages: [
-      { role: "system", content: ANALYSIS_PROMPT },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: [{ type: "image_url", image_url: { url: dataUrl } }],
@@ -104,22 +126,34 @@ async function analyzeImageOpenAI(imagePath) {
   if (!raw) throw new Error("Empty AI response");
   const jsonStr = raw.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
   const parsed = JSON.parse(jsonStr);
+  if (forPolymarket15m && parsed.marketBias === "range") {
+    parsed.marketBias = parsed.confidence >= 50 ? "bullish" : "bearish";
+  }
   return parsed;
 }
 
 /**
  * Analyze image: prefer OpenAI direct (avoids Vercel blocking cron). Else use Chart Analytic app.
+ * @param {string} imagePath
+ * @param {{ forPolymarket15m?: boolean }} options - When true, use prompt optimized for "next 15 min up/down" (requires OPENAI_API_KEY).
  */
-async function analyzeImage(imagePath) {
+async function analyzeImage(imagePath, options = {}) {
+  const forPolymarket15m = Boolean(options.forPolymarket15m);
+  if (forPolymarket15m && process.env.OPENAI_API_KEY) {
+    return analyzeImageOpenAI(imagePath, { forPolymarket15m: true });
+  }
+  if (forPolymarket15m) {
+    throw new Error("Polymarket 15-min mode requires OPENAI_API_KEY (app API does not support 15m prompt).");
+  }
   if (process.env.OPENAI_API_KEY) {
-    return analyzeImageOpenAI(imagePath);
+    return analyzeImageOpenAI(imagePath, {});
   }
   const baseUrl = process.env.CHART_ANALYTIC_URL;
   const secret = process.env.ANALYZE_IMAGE_SECRET;
   if (baseUrl && secret) {
-    return analyzeImageViaApp(imagePath);
+    return analyzeImageViaApp(imagePath, options);
   }
-  return analyzeImageOpenAI(imagePath); // throws clear error about OPENAI_API_KEY
+  return analyzeImageOpenAI(imagePath, {}); // throws clear error about OPENAI_API_KEY
 }
 
 // --- Caption: posting rules (no identical text; 40%+ lexical variation; 10 hashtags, 3–5 per post; 4 random formats) ---

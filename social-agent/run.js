@@ -6,6 +6,7 @@
  *   node run.js eurusd       Run only EUR/USD schedule
  *   node run.js --no-analyze Run without AI analysis (post chart only with symbol/tf caption)
  *   node run.js --dry-run    Capture + analyze + format post text; print only, do not post to X
+ *   node run.js --predict    Polymarket-only: capture, 15-min up/down analysis, place prediction; no X post
  *
  * Loads .env from project root. Requires: puppeteer, OPENAI_API_KEY or Chart Analytic app (if analyzing), X API credentials (unless --dry-run).
  */
@@ -25,16 +26,17 @@ try {
   // .env optional
 }
 
-const { getSchedulesForHour, getScheduleById, SCHEDULES } = require("./config");
+const { getSchedulesDueNow, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
 const { analyzeImage, formatCaption, pickHashtags, HASHTAG_POOL } = require("./analyze");
 const { composeExportImage } = require("./compose-export");
 const postX = require("./post-x");
+const polymarket = require("./polymarket");
 
 const OUT_DIR = path.join(__dirname, "output");
 
 async function runOne(schedule, options = {}) {
-  const { skipAnalyze = false, dryRun = false } = options;
+  const { skipAnalyze = false, dryRun = false, doPredict = false } = options;
   const outPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}.png`);
 
   console.log(`[${schedule.id}] Capturing ${schedule.name} ${schedule.timeframe}...`);
@@ -43,20 +45,38 @@ async function runOne(schedule, options = {}) {
 
   let caption;
   let imagePathForPost = outPath;
+  let analysis = null;
   if (skipAnalyze) {
     const hashtags = pickHashtags(HASHTAG_POOL, 3, 5);
     caption = `${schedule.name} ${schedule.timeframe} chart\n${hashtags}`;
   } else {
-    console.log(`[${schedule.id}] Analyzing...`);
-    const analysis = await analyzeImage(outPath);
+    const forPolymarket15m = Boolean(doPredict && schedule.polymarketAsset);
+    console.log(`[${schedule.id}] Analyzing${forPolymarket15m ? " (next 15 min up/down)..." : "..."}`);
+    analysis = await analyzeImage(outPath, { forPolymarket15m });
     caption = formatCaption(schedule, analysis);
-    // Compose Chart Analytic–style export (chart + analysis panel) and use that for the post
-    const exportPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}-export.png`);
-    console.log(`[${schedule.id}] Composing export image (chart + analysis)...`);
-    await composeExportImage(outPath, analysis, exportPath, {
-      pairLabel: `${schedule.name} ${schedule.timeframe}`,
-    });
-    imagePathForPost = exportPath;
+    if (!doPredict) {
+      const exportPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}-export.png`);
+      console.log(`[${schedule.id}] Composing export image (chart + analysis)...`);
+      await composeExportImage(outPath, analysis, exportPath, {
+        pairLabel: `${schedule.name} ${schedule.timeframe}`,
+      });
+      imagePathForPost = exportPath;
+    }
+  }
+
+  if (doPredict && schedule.polymarketAsset && analysis) {
+    if (!polymarket.isConfigured()) {
+      console.warn(`[${schedule.id}] Polymarket not configured (POLYMARKET_PRIVATE_KEY); skipping prediction.`);
+    } else {
+      console.log(`[${schedule.id}] Placing Polymarket prediction...`);
+      try {
+        const result = await polymarket.placePrediction(schedule, analysis, { dryRun });
+        console.log(`[${schedule.id}] Polymarket:`, result.message);
+        if (result.placed) console.log(`[${schedule.id}] Order ID:`, result.orderId);
+      } catch (err) {
+        console.error(`[${schedule.id}] Polymarket error:`, err.message);
+      }
+    }
   }
 
   if (dryRun) {
@@ -64,6 +84,11 @@ async function runOne(schedule, options = {}) {
     console.log(caption);
     console.log(`[${schedule.id}] --- Image: ${imagePathForPost} ---`);
     return { dryRun: true, caption, imagePath: imagePathForPost };
+  }
+
+  if (doPredict) {
+    console.log(`[${schedule.id}] Done (Polymarket bot; no social post).`);
+    return { polymarketOnly: true };
   }
 
   if (!postX.isConfigured()) {
@@ -84,6 +109,7 @@ async function main() {
   const args = process.argv.slice(2);
   const skipAnalyze = args.includes("--no-analyze");
   const dryRun = args.includes("--dry-run");
+  const doPredict = args.includes("--predict");
   const filtered = args.filter((a) => !a.startsWith("--"));
 
   // Cron jitter: when run by cron (no schedule id), wait 1–5 min so runs aren't all at exact :00
@@ -105,17 +131,19 @@ async function main() {
     }
     schedules = [s];
   } else {
-    const utcHour = new Date().getUTCHours();
-    schedules = getSchedulesForHour(utcHour);
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMinute = now.getUTCMinutes();
+    schedules = getSchedulesDueNow(utcHour, utcMinute);
     if (!schedules.length) {
-      console.log(`No schedules for current UTC hour (${utcHour}:00). Next: ${SCHEDULES.map((s) => `${s.id}@${s.postTimeUTC}:00`).join(", ")}`);
+      console.log(`No schedules for current UTC time (${utcHour}:${String(utcMinute).padStart(2, "0")}).`);
       process.exit(0);
     }
   }
 
   for (const schedule of schedules) {
     try {
-      await runOne(schedule, { skipAnalyze, dryRun });
+      await runOne(schedule, { skipAnalyze, dryRun, doPredict });
     } catch (err) {
       console.error(`[${schedule.id}] Error:`, err.message);
       process.exitCode = 1;

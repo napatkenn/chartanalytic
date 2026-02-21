@@ -10,6 +10,8 @@
 #   For posting to X (required unless using --dry-run):
 #     X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 #
+#   For Polymarket predictions (crypto every 15 min): POLYMARKET_PRIVATE_KEY (0x...)
+#
 # Chrome for Puppeteer is installed in build so the cron can capture/screenshot.
 
 services:
@@ -17,8 +19,8 @@ services:
     name: chart-social-agent
     runtime: node
     plan: starter
-    # Run at 07:00, 12:00, 15:00, 17:00, 20:00 UTC; run.js adds 1–5 min jitter before starting
-    schedule: "0 7,12,15,17,20 * * 1-5"
+    # Every 15 min (:00, :15, :30, :45) — crypto (BTC/ETH/SOL) analysis + Polymarket; hourly forex at 7,12,15,17,20
+    schedule: "0,15,30,45 * * * *"
     # Install Chrome into project dir (absolute path required by puppeteer install) so it's in the uploaded build
     buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
-    startCommand: node social-agent/run.js
+    startCommand: node social-agent/run.js --predict
