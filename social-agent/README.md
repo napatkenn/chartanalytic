@@ -96,20 +96,19 @@ Targets: 1.1940 → 1.1810
 #forex #trading #fx #technicalanalysis #forexsignals
 ```
 
-## Running on Render (cron)
+## Running on Fly.io (cron)
 
-The repo includes a **Blueprint** (`render.yaml`) for a Render cron job that runs **every 15 minutes** (`0,15,30,45 * * * *`). Each run:
+The repo includes **Fly.io** config (`fly.toml`, `Dockerfile.cron`) for running the social-agent as a cron worker.
 
-- At **:00, :15, :30, :45**: captures BTC, ETH, SOL 1m charts, runs analysis, posts to X (if configured), and places Polymarket predictions (with `--predict`).
-- When the current UTC hour matches a forex schedule (7, 12, 15, 17, 20), that pair is also run in the same cron run.
+1. **First time:** `fly launch` (or `fly apps create chartanalytic-cron`), then `fly deploy`.
+2. **Secrets:** `fly secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...` (and X_* for social posting).
+3. **Run once (Polymarket):** `fly run node social-agent/run.js --predict`
+4. **Run once (Social/X):** `fly run node social-agent/run.js`
+5. **Schedule:** Use [Fly task scheduling](https://fly.io/docs/blueprints/task-scheduling/) (Cron Manager or Supercronic) or an external cron (e.g. cron-job.org) to trigger at:
+   - **:00, :15, :30, :45** UTC for Polymarket (BTC, ETH, SOL, XRP)
+   - **7, 12, 15, 17, 20** UTC for Social (forex pairs)
 
-The build runs `npx puppeteer browsers install chrome` so Chrome is available when the cron runs.
-
-If you still see **"Could not find Chrome"** on Render:
-
-1. In the Render Dashboard → your **chart-social-agent** cron job → **Environment**.
-2. Add: **`PUPPETEER_CACHE_DIR`** = **`.cache/puppeteer`** (so Chrome is stored in the project and persists from build to run).
-3. Trigger a **manual deploy** (or push a commit) so the build runs again with this env var.
+The Docker image uses system Chromium (`PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`) so no Chrome download is needed at runtime.
 
 ## Scheduling (cron / Task Scheduler)
 

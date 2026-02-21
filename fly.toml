@@ -1,0 +1,16 @@
+# Fly.io app for chartanalytic social-agent cron.
+#
+# First time: fly launch  (creates app, use Dockerfile.cron)
+# Set secrets: fly secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...
+# Run once:    fly run node social-agent/run.js --predict
+# Schedule:    Use Fly Cron Manager (fly.io/docs/blueprints/task-scheduling/) or
+#              external cron (e.g. cron-job.org) to run: fly run node social-agent/run.js --predict
+#              at :00, :15, :30, :45 for Polymarket; at 7,12,15,17,20 UTC for Social.
+
+app = "chartanalytic-cron"
+
+[build]
+  dockerfile = "Dockerfile.cron"
+
+[env]
+  NODE_ENV = "production"

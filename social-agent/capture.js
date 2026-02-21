@@ -164,7 +164,7 @@ async function captureChart(url, outputPath, options = {}) {
     }
     await new Promise((r) => setTimeout(r, waitMs));
 
-    if (process.env.RENDER) {
+    if (process.env.FLY_APP_NAME || process.env.RENDER) {
       console.log("[capture] Extra 3s for chart to settle...");
       await new Promise((r) => setTimeout(r, 3000));
     }

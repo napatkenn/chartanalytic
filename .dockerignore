@@ -1,0 +1,9 @@
+# Reduce cron image size; .env is injected at run via fly secrets
+node_modules
+.next
+.cache
+.git
+.env
+.env.*
+*.md
+render.yaml

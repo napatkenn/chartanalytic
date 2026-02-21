@@ -1,5 +1,5 @@
 /**
- * On Render, cron runs have an ephemeral filesystem: build-time .cache is not available.
+ * On Fly.io / ephemeral cron, the filesystem may not have .cache from build.
  * We point Puppeteer at project .cache and, if Chrome is missing, install it at runtime.
  */
 const path = require("path");
@@ -26,7 +26,7 @@ function findChromeInCache(cacheDir) {
   return null;
 }
 
-/** Install Chrome into cacheDir if missing (for Render cron ephemeral fs). */
+/** Install Chrome into cacheDir if missing (for ephemeral fs, e.g. Fly.io). */
 function installChromeIfNeeded(cacheDir, projectRoot) {
   if (process.env.PUPPETEER_SKIP_RUNTIME_INSTALL === "true") return;
   if (process.platform !== "linux") return;
@@ -70,8 +70,8 @@ function getChromeLaunchOptions() {
 
   installChromeIfNeeded(cacheDir, projectRoot);
 
-  const executablePath = findChromeInCache(cacheDir);
-  if (executablePath) opts.executablePath = executablePath;
+  const executablePath = findChromeInCache(cacheDir) || process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (executablePath && fs.existsSync(executablePath)) opts.executablePath = executablePath;
   return opts;
 }
 

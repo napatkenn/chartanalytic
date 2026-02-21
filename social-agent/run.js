@@ -14,7 +14,7 @@
 const path = require("path");
 const fs = require("fs").promises;
 
-// Point Puppeteer at project .cache before any module loads Puppeteer (fixes Render cron where cwd/shell env may not set PUPPETEER_CACHE_DIR)
+// Point Puppeteer at project .cache before any module loads Puppeteer (fixes Fly.io / ephemeral cron where cwd may not set PUPPETEER_CACHE_DIR)
 const projectRoot = path.resolve(__dirname, "..");
 const puppeteerCache = path.join(projectRoot, ".cache", "puppeteer");
 if (!process.env.PUPPETEER_CACHE_DIR) process.env.PUPPETEER_CACHE_DIR = puppeteerCache;
@@ -32,7 +32,7 @@ try {
 }
 
 // Optional: route all HTTP/HTTPS through a proxy (e.g. to avoid Polymarket geoblock when server is in Germany).
-// Set PROXY_URL (e.g. http://201.148.32.162:80) in Render Dashboard or .env.
+// Set PROXY_URL (e.g. http://host:80) in Fly secrets or .env.
 const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
 if (proxyUrl && proxyUrl.trim()) {
   const url = proxyUrl.trim();
@@ -81,7 +81,7 @@ async function runOne(schedule, options = {}) {
 
   if (doPredict && schedule.polymarketAsset && analysis) {
     if (!polymarket.isConfigured()) {
-      console.warn(`[${schedule.id}] Polymarket not configured. Set POLYMARKET_PRIVATE_KEY in Render Dashboard → chart-polymarket → Environment (not in .env; .env is not deployed).`);
+      console.warn(`[${schedule.id}] Polymarket not configured. Set POLYMARKET_PRIVATE_KEY in Fly secrets (fly secrets set POLYMARKET_PRIVATE_KEY=0x...) or in .env.`);
     } else {
       console.log(`[${schedule.id}] Placing Polymarket prediction...`);
       try {
@@ -141,7 +141,7 @@ async function main() {
       if (schedules.length) {
         console.log("Polymarket mode: running", schedules.map((s) => s.id).join(", "));
         if (!polymarket.isConfigured()) {
-          console.warn("POLYMARKET_PRIVATE_KEY not set. Set it in Render Dashboard → chart-polymarket → Environment (env from .env is not deployed).");
+          console.warn("POLYMARKET_PRIVATE_KEY not set. Set it with fly secrets set POLYMARKET_PRIVATE_KEY=0x... or in .env.");
         }
       }
     } else {
