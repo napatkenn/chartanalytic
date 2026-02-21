@@ -31,6 +31,16 @@ try {
   // .env optional
 }
 
+// Optional: route all HTTP/HTTPS through a proxy (e.g. to avoid Polymarket geoblock when server is in Germany).
+// Set PROXY_URL (e.g. http://201.148.32.162:80) in Render Dashboard or .env.
+const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+if (proxyUrl && proxyUrl.trim()) {
+  const url = proxyUrl.trim();
+  process.env.GLOBAL_AGENT_HTTP_PROXY = url;
+  process.env.GLOBAL_AGENT_HTTPS_PROXY = url;
+  require("global-agent/bootstrap");
+}
+
 const { getSchedulesForHour, getSchedulesForPolymarket, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
 const { analyzeImage, formatCaption, pickHashtags, HASHTAG_POOL } = require("./analyze");

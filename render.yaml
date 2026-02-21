@@ -1,7 +1,7 @@
 # Render Blueprint: two cron jobs — (1) Polymarket only, (2) Social (forex) only.
 #
 # Set env vars in Render Dashboard → each cron service → Environment:
-#   chart-polymarket: OPENAI_API_KEY, POLYMARKET_PRIVATE_KEY (0x...). .env is NOT deployed; add vars here.
+#   chart-polymarket: OPENAI_API_KEY, POLYMARKET_PRIVATE_KEY (0x...). Optional: PROXY_URL=http://host:80 to route traffic via proxy (e.g. Mexico) and avoid Polymarket geoblock when Render is in Germany.
 #   chart-social-agent: OPENAI_API_KEY, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
 #
 # Chrome for Puppeteer is installed in build so both crons can capture/screenshot.
