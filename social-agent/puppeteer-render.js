@@ -1,10 +1,10 @@
 /**
- * On Render, Chrome is installed into .cache/puppeteer during build but the runtime
- * still looks at /opt/render/.cache/puppeteer. Return launch options so we use the
- * Chrome binary inside the project (executablePath so Puppeteer does not resolve cache itself).
+ * On Render, cron runs have an ephemeral filesystem: build-time .cache is not available.
+ * We point Puppeteer at project .cache and, if Chrome is missing, install it at runtime.
  */
 const path = require("path");
 const fs = require("fs");
+const { execSync } = require("child_process");
 
 function findChromeInCache(cacheDir) {
   const chromeDir = path.join(cacheDir, "chrome");
@@ -26,6 +26,23 @@ function findChromeInCache(cacheDir) {
   return null;
 }
 
+/** Install Chrome into cacheDir if missing (for Render cron ephemeral fs). */
+function installChromeIfNeeded(cacheDir, projectRoot) {
+  if (process.env.PUPPETEER_SKIP_RUNTIME_INSTALL === "true") return;
+  if (process.platform !== "linux") return;
+  if (findChromeInCache(cacheDir)) return;
+  try {
+    console.log("[puppeteer] Chrome not in cache; installing (this may take 1–2 min)...");
+    execSync("npx puppeteer browsers install chrome", {
+      env: { ...process.env, PUPPETEER_CACHE_DIR: cacheDir },
+      cwd: projectRoot,
+      stdio: "inherit",
+    });
+  } catch (e) {
+    console.warn("[puppeteer] Runtime install failed:", e.message);
+  }
+}
+
 function getChromeLaunchOptions() {
   const opts = { args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] };
   const projectRoot = path.resolve(__dirname, "..");
@@ -35,6 +52,8 @@ function getChromeLaunchOptions() {
       ? process.env.PUPPETEER_CACHE_DIR
       : path.join(projectRoot, process.env.PUPPETEER_CACHE_DIR)
     : defaultCacheDir;
+
+  installChromeIfNeeded(cacheDir, projectRoot);
 
   const executablePath = findChromeInCache(cacheDir);
   if (executablePath) opts.executablePath = executablePath;
