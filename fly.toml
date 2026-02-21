@@ -1,18 +1,22 @@
-# Fly.io app for chartanalytic social-agent cron (Supercronic).
-# https://fly.io/docs/blueprints/supercronic/
+# fly.toml app configuration file generated for chartanalytic-cron on 2026-02-21T22:03:49+07:00
 #
-# First time: fly launch  (use Dockerfile.cron)
-# Secrets:    fly secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...
-# Deploy:     fly deploy
-# Scale:      fly scale count cron=1   (only one cron process)
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "chartanalytic-cron"
+app = 'chartanalytic-cron'
+primary_region = 'nrt'
 
 [build]
-  dockerfile = "Dockerfile.cron"
+  dockerfile = 'Dockerfile.cron'
 
 [env]
-  NODE_ENV = "production"
+  NODE_ENV = 'production'
 
 [processes]
-  cron = "supercronic /app/crontab"
+  cron = 'supercronic /app/crontab'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024

@@ -3,6 +3,10 @@
 
 FROM node:20-bookworm-slim
 
+# Install curl (slim image doesn't have it) then Supercronic
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Supercronic (cron for containers); https://github.com/aptible/supercronic/releases
 ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
     SUPERCRONIC=supercronic-linux-amd64 \
@@ -13,7 +17,6 @@ RUN curl -fsSLO "$SUPERCRONIC_URL" \
     && mv "$SUPERCRONIC" /usr/local/bin/supercronic
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
     chromium \
     fonts-liberation \
     libasound2 \
