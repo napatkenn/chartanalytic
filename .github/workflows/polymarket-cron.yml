@@ -5,8 +5,9 @@
 name: Polymarket cron
 
 on:
-  schedule:
-    - cron: "0,15,30,45 * * * *"
+  # Schedule paused — uncomment below to run every 15 min
+  # schedule:
+  #   - cron: "0,15,30,45 * * * *"
   workflow_dispatch:
 
 jobs:

@@ -2,8 +2,9 @@
 name: Social cron
 
 on:
-  schedule:
-    - cron: "0 7,12,15,17,20 * * *"
+  # Schedule paused — uncomment below to run at 7,12,15,17,20 UTC
+  # schedule:
+  #   - cron: "0 7,12,15,17,20 * * *"
   workflow_dispatch:
 
 jobs:

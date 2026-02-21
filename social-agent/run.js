@@ -57,7 +57,7 @@ async function checkGeoblockViaProxy(proxyUrl) {
       });
     });
     req.on("error", () => resolve(null));
-    req.setTimeout(15000, () => {
+    req.setTimeout(8000, () => {
       req.destroy();
       resolve(null);
     });
@@ -179,6 +179,13 @@ async function main() {
     process.env.GLOBAL_AGENT_HTTP_PROXY = url;
     process.env.GLOBAL_AGENT_HTTPS_PROXY = url;
     require("global-agent/bootstrap");
+    // Node 18+ fetch() uses undici and ignores global-agent; patch it so fetch() uses the proxy too
+    try {
+      const { setGlobalDispatcher, ProxyAgent } = require("undici");
+      setGlobalDispatcher(new ProxyAgent(url));
+    } catch (e) {
+      console.warn("[proxy] undici ProxyAgent not available, fetch() may not use proxy:", e.message);
+    }
   }
 
   const args = process.argv.slice(2);
