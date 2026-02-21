@@ -14,6 +14,11 @@
 const path = require("path");
 const fs = require("fs").promises;
 
+// Point Puppeteer at project .cache before any module loads Puppeteer (fixes Render cron where cwd/shell env may not set PUPPETEER_CACHE_DIR)
+const projectRoot = path.resolve(__dirname, "..");
+const puppeteerCache = path.join(projectRoot, ".cache", "puppeteer");
+if (!process.env.PUPPETEER_CACHE_DIR) process.env.PUPPETEER_CACHE_DIR = puppeteerCache;
+
 // Load .env from project root (sync)
 const rootEnv = path.resolve(__dirname, "..", ".env");
 try {
