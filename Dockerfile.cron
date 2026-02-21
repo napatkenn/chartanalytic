@@ -41,12 +41,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 RUN npm ci --omit=dev && rm -rf /root/.npm
 
 COPY . .
 COPY crontab /app/crontab
-# Prisma (if present)
-RUN npx prisma generate 2>/dev/null || true
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
