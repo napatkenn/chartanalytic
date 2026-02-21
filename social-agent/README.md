@@ -96,18 +96,15 @@ Targets: 1.1940 → 1.1810
 #forex #trading #fx #technicalanalysis #forexsignals
 ```
 
-## Running on Fly.io (cron)
+## Running on Fly.io (cron) — machines only at schedule time
 
-The repo uses **[Supercronic](https://fly.io/docs/blueprints/supercronic/)** so the cron schedule runs inside the Fly app (see [task scheduling](https://fly.io/docs/blueprints/task-scheduling/)).
+The repo uses **[Fly Cron Manager](https://github.com/fly-apps/cron-manager)**: a machine starts only when a job is due, runs the command, then exits (no 24/7 process). See [task scheduling](https://fly.io/docs/blueprints/task-scheduling/).
 
-1. **First time:** `flyctl launch` (use Dockerfile.cron), then `flyctl deploy`.
-2. **Secrets:** `flyctl secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...` (and X_* for social posting).
-3. **Scale:** `flyctl scale count cron=1` (run exactly one cron process).
-4. **Schedule (in `crontab`):**
-   - **:00, :15, :30, :45** UTC → Polymarket (BTC, ETH, SOL, XRP) — `node social-agent/run.js --predict`
-   - **7, 12, 15, 17, 20** UTC → Social (forex) — `node social-agent/run.js`
+1. **Deploy the image:** `flyctl deploy` then `flyctl scale count 0` (keeps the image in the registry, zero machines running).
+2. **Secrets:** `flyctl secrets set OPENAI_API_KEY=sk-... POLYMARKET_PRIVATE_KEY=0x...` (and X_* for social).
+3. **Deploy Cron Manager:** Clone [cron-manager](https://github.com/fly-apps/cron-manager), copy `cron-manager/schedules.json` from this repo, set `FLY_API_TOKEN`, deploy. See **cron-manager/README.md** in this repo.
 
-The Docker image uses system Chromium (`PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`) so no Chrome download is needed at runtime.
+Schedules: **:00, :15, :30, :45** UTC → Polymarket; **7, 12, 15, 17, 20** UTC → Social. The Docker image uses system Chromium; no Chrome download at runtime.
 
 ## Scheduling (cron / Task Scheduler)
 

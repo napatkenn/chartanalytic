@@ -1,0 +1,36 @@
+[
+  {
+    "name": "chartanalytic-polymarket",
+    "app_name": "chartanalytic-cron",
+    "schedule": "0,15,30,45 * * * *",
+    "region": "nrt",
+    "command": "node social-agent/run.js --predict",
+    "command_timeout": 600,
+    "enabled": true,
+    "config": {
+      "metadata": { "fly_process_group": "cron" },
+      "auto_destroy": true,
+      "disable_machine_autostart": true,
+      "guest": { "cpu_kind": "shared", "cpus": 1, "memory_mb": 1024 },
+      "image": "registry.fly.io/chartanalytic-cron:latest",
+      "restart": { "max_retries": 1, "policy": "no" }
+    }
+  },
+  {
+    "name": "chartanalytic-social",
+    "app_name": "chartanalytic-cron",
+    "schedule": "0 7,12,15,17,20 * * *",
+    "region": "nrt",
+    "command": "node social-agent/run.js",
+    "command_timeout": 600,
+    "enabled": true,
+    "config": {
+      "metadata": { "fly_process_group": "cron" },
+      "auto_destroy": true,
+      "disable_machine_autostart": true,
+      "guest": { "cpu_kind": "shared", "cpus": 1, "memory_mb": 1024 },
+      "image": "registry.fly.io/chartanalytic-cron:latest",
+      "restart": { "max_retries": 1, "policy": "no" }
+    }
+  }
+]

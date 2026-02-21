@@ -1,22 +1,11 @@
-# Fly.io cron image: Node + Chromium + Supercronic for social-agent.
-# See https://fly.io/docs/blueprints/supercronic/
+# Fly.io one-shot cron image: Node + Chromium for social-agent.
+# Used by Fly Cron Manager: a machine starts at schedule time, runs the command, then exits (no 24/7 process).
+# Build: fly deploy (or docker build -f Dockerfile.cron -t chartanalytic-cron .)
 
 FROM node:20-bookworm-slim
 
-# Install curl (slim image doesn't have it) then Supercronic
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# Supercronic (cron for containers); https://github.com/aptible/supercronic/releases
-ENV SUPERCRONIC_URL=https://github.com/aptible/supercronic/releases/download/v0.2.29/supercronic-linux-amd64 \
-    SUPERCRONIC=supercronic-linux-amd64 \
-    SUPERCRONIC_SHA1SUM=cd48d45c4b10f3f0bfdd3a57d054cd05ac96812b
-RUN curl -fsSLO "$SUPERCRONIC_URL" \
-    && echo "${SUPERCRONIC_SHA1SUM}  ${SUPERCRONIC}" | sha1sum -c - \
-    && chmod +x "$SUPERCRONIC" \
-    && mv "$SUPERCRONIC" /usr/local/bin/supercronic
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     chromium \
     fonts-liberation \
     libasound2 \
@@ -45,10 +34,9 @@ COPY prisma ./prisma
 RUN npm ci --omit=dev && rm -rf /root/.npm
 
 COPY . .
-COPY crontab /app/crontab
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# Run Supercronic so crontab runs at :00, :15, :30, :45 (Polymarket) and 7,12,15,17,20 UTC (Social).
-CMD ["supercronic", "/app/crontab"]
+# Default CMD when run manually; Cron Manager overrides with the schedule command.
+CMD ["node", "social-agent/run.js", "--predict"]

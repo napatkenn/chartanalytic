@@ -1,22 +1,19 @@
-# fly.toml app configuration file generated for chartanalytic-cron on 2026-02-21T22:03:49+07:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# chartanalytic-cron: one-shot image for Fly Cron Manager (no 24/7 machine).
+# 1. Deploy this app so the image is in the registry: fly deploy
+# 2. Scale to 0 so no machines run: fly scale count 0
+# 3. Deploy Cron Manager (see README) with cron-manager/schedules.json so machines start only at schedule time.
 
-app = 'chartanalytic-cron'
-primary_region = 'nrt'
+app = "chartanalytic-cron"
+primary_region = "nrt"
 
 [build]
-  dockerfile = 'Dockerfile.cron'
+  dockerfile = "Dockerfile.cron"
 
 [env]
-  NODE_ENV = 'production'
-
-[processes]
-  cron = 'supercronic /app/crontab'
+  NODE_ENV = "production"
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
+  memory = "1gb"
+  cpu_kind = "shared"
   cpus = 1
   memory_mb = 1024
