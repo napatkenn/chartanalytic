@@ -1,26 +1,27 @@
-# Render Blueprint: social-agent cron job only.
-# In Render: New → Blueprint → connect repo → Blueprint path: render.yaml (default)
+# Render Blueprint: two cron jobs — (1) Polymarket only, (2) Social (forex) only.
 #
-# Required env vars (set in Render Dashboard → chart-social-agent → Environment):
+# Set env vars in each cron service (or in Render Dashboard):
+#   OPENAI_API_KEY (for analysis)
+#   X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET (for social cron only)
+#   POLYMARKET_PRIVATE_KEY (for Polymarket cron only)
 #
-#   Analysis — prefer OPENAI_API_KEY (recommended for cron; avoids Vercel blocking):
-#     OPENAI_API_KEY = your OpenAI API key
-#   Alternative: CHART_ANALYTIC_URL + ANALYZE_IMAGE_SECRET (can be blocked by Vercel Security Checkpoint)
-#
-#   For posting to X (required unless using --dry-run):
-#     X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_TOKEN_SECRET
-#
-#   For Polymarket predictions (crypto every 15 min): POLYMARKET_PRIVATE_KEY (0x...)
-#
-# Chrome for Puppeteer is installed in build so the cron can capture/screenshot.
+# Chrome for Puppeteer is installed in build so both crons can capture/screenshot.
 
 services:
+  # 1) Polymarket: BTC/ETH/SOL/XRP every 15 min. No social post.
+  - type: cron
+    name: chart-polymarket
+    runtime: node
+    plan: starter
+    schedule: "0,15,30,45 * * * *"
+    buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
+    startCommand: node social-agent/run.js --predict
+
+  # 2) Social: EUR/USD, GBP/USD, XAU/USD, USD/JPY, AUD/USD at their hours. Posts to X.
   - type: cron
     name: chart-social-agent
     runtime: node
     plan: starter
-    # Every 15 min (:00, :15, :30, :45) — crypto (BTC/ETH/SOL) analysis + Polymarket; hourly forex at 7,12,15,17,20
-    schedule: "0,15,30,45 * * * *"
-    # Install Chrome into project dir (absolute path required by puppeteer install) so it's in the uploaded build
+    schedule: "0 7,12,15,17,20 * * *"
     buildCommand: npm install && PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer npx puppeteer browsers install chrome
-    startCommand: node social-agent/run.js --predict
+    startCommand: node social-agent/run.js

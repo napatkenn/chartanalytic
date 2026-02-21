@@ -142,6 +142,11 @@ function getSchedulesDueNow(utcHour, utcMinute) {
   return merged;
 }
 
+/** Only crypto schedules that place Polymarket predictions (btc, eth, sol, xrp). Use when running with --predict so every cron run hits Polymarket even if the minute is off. */
+function getSchedulesForPolymarket() {
+  return SCHEDULES.filter((s) => s.polymarketAsset && s.every15Min);
+}
+
 function getScheduleById(id) {
   return SCHEDULES.find((s) => s.id === id);
 }
@@ -151,5 +156,6 @@ module.exports = {
   getSchedulesForHour,
   getSchedulesFor15MinSlot,
   getSchedulesDueNow,
+  getSchedulesForPolymarket,
   getScheduleById,
 };
