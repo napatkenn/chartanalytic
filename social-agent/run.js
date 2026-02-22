@@ -31,8 +31,7 @@ try {
   // .env optional
 }
 
-// Bootstrap global-agent so http/https can be proxied when env is set (polymarket.js sets it only during CLOB calls).
-require("global-agent/bootstrap");
+// global-agent is bootstrapped in polymarket.js only when placing orders (with proxy set), so capture/analyze stay direct.
 
 const { getSchedulesForHour, getSchedulesForPolymarket, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");
@@ -149,7 +148,12 @@ async function main() {
     }
   }
 
-  for (const schedule of schedules) {
+  const delayBetweenCapturesMs = doPredict ? (Number(process.env.CAPTURE_DELAY_MS) || 4000) : 0;
+  for (let i = 0; i < schedules.length; i++) {
+    if (i > 0 && delayBetweenCapturesMs > 0) {
+      await new Promise((r) => setTimeout(r, delayBetweenCapturesMs));
+    }
+    const schedule = schedules[i];
     try {
       await runOne(schedule, { skipAnalyze, dryRun, doPredict });
     } catch (err) {

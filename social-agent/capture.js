@@ -211,7 +211,18 @@ async function captureChart(url, outputPath, options = {}) {
     console.log("[capture] Saved", outputPath, "(" + Math.round(stat.size / 1024) + " KB)");
     return { path: outputPath, size: stat.size };
   } finally {
-    await browser.close();
+    try {
+      await browser.close();
+    } catch (e) {
+      if (e.code === "EBUSY" || (e.message && e.message.includes("EBUSY"))) {
+        await new Promise((r) => setTimeout(r, 500));
+        try {
+          await browser.close();
+        } catch (_) {}
+      } else {
+        throw e;
+      }
+    }
   }
 }
 

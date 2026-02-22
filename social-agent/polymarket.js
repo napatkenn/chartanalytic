@@ -8,8 +8,13 @@
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
 const CLOB_HOST = "https://clob.polymarket.com";
+/** GET https://polymarket.com/api/geoblock — used before any CLOB order to check if IP is allowed to trade. */
 const GEOBLOCK_URL = "https://polymarket.com/api/geoblock";
 const CHAIN_ID = 137; // Polygon
+const RELAYER_URL = "https://relayer-v2.polymarket.com/";
+const USDC_E = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
+const CTF_SPENDER = "0x4D97DCd97eC945f40cF65F87097ACe5EA0476045";
+let gaslessApprovalDone = false;
 
 const proxyUrl = (process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY || "").trim();
 let proxyAgent = null;
@@ -392,6 +397,77 @@ function analysisToSide(analysis, marketQuestion) {
 }
 
 /**
+ * Run USDC.e approve(CTF) via Polymarket gasless relayer (Builder Program).
+ * Requires POLY_BUILDER_API_KEY, POLY_BUILDER_SECRET, POLY_BUILDER_PASSPHRASE.
+ * @see https://docs.polymarket.com/trading/gasless
+ * @param {string} privateKey - Wallet private key (0x...)
+ * @returns {Promise<{ ok: boolean, message?: string }>}
+ */
+async function ensureAllowanceGasless(privateKey) {
+  try {
+    const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
+    const secret = (process.env.POLY_BUILDER_SECRET || "").trim();
+    const passphrase = (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+    if (!key || !secret || !passphrase) return { ok: false, message: "Builder credentials not set" };
+
+    const { createWalletClient, http } = require("viem");
+    const { privateKeyToAccount } = require("viem/accounts");
+    const { polygon } = require("viem/chains");
+    const { encodeFunctionData, maxUint256 } = require("viem");
+    const { RelayClient, RelayerTxType } = require("@polymarket/builder-relayer-client");
+    const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
+
+    const account = privateKeyToAccount(privateKey);
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://rpc.ankr.com/polygon";
+    const wallet = createWalletClient({
+      account,
+      chain: polygon,
+      transport: http(rpc),
+    });
+    const builderConfig = new BuilderConfig({
+      localBuilderCreds: { key, secret, passphrase },
+    });
+    const client = new RelayClient(RELAYER_URL, CHAIN_ID, wallet, builderConfig, RelayerTxType.PROXY);
+
+    const erc20ApproveAbi = [
+      {
+        inputs: [
+          { name: "_spender", type: "address" },
+          { name: "_value", type: "uint256" },
+        ],
+        name: "approve",
+        outputs: [{ type: "bool" }],
+        stateMutability: "nonpayable",
+        type: "function",
+      },
+    ];
+    const data = encodeFunctionData({
+      abi: erc20ApproveAbi,
+      functionName: "approve",
+      args: [CTF_SPENDER, maxUint256],
+    });
+    const response = await client.execute(
+      [{ to: USDC_E, data, value: "0" }],
+      "Approve USDC.e for CTF"
+    );
+    const result = await response.wait();
+    if (!result) return { ok: false, message: "Gasless approve failed on-chain (relayer reported failed)." };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e?.message || String(e) };
+  }
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(message || `Timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
+/**
  * Place a prediction on Polymarket based on chart analysis.
  * @param {object} schedule - Schedule from config (id, name, polymarketAsset)
  * @param {object} analysis - Result from analyzeImage (marketBias, confidence, ...)
@@ -401,7 +477,7 @@ function analysisToSide(analysis, marketQuestion) {
 async function placePrediction(schedule, analysis, options = {}) {
   const dryRun = options.dryRun === true;
   const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 65;
-  const maxSizeUsd = Number(process.env.POLYMARKET_MAX_SIZE_USD) || 1;
+  const maxSizeUsd = Math.max(1, Number(process.env.POLYMARKET_MAX_SIZE_USD) || 1);
 
   const assetKey = schedule.polymarketAsset;
   if (!assetKey) {
@@ -443,12 +519,13 @@ async function placePrediction(schedule, analysis, options = {}) {
     };
   }
 
-  // CLOB client uses axios (http module), not fetch. Set global-agent proxy env so axios requests go through proxy.
-  const prevHttpProxy = process.env.GLOBAL_AGENT_HTTP_PROXY;
-  const prevHttpsProxy = process.env.GLOBAL_AGENT_HTTPS_PROXY;
+  // Bootstrap proxy first so relayer + CLOB both use it
   if (proxyUrl) {
     process.env.GLOBAL_AGENT_HTTP_PROXY = proxyUrl;
     process.env.GLOBAL_AGENT_HTTPS_PROXY = proxyUrl;
+    try {
+      require("global-agent/bootstrap");
+    } catch (_) {}
   }
   // Also set undici global dispatcher for any fetch used by CLOB
   let prevDispatcher;
@@ -460,8 +537,28 @@ async function placePrediction(schedule, analysis, options = {}) {
     } catch (_) {}
   }
 
+  const key = (process.env.POLYMARKET_PRIVATE_KEY || "").trim();
+  const hasBuilderCreds =
+    (process.env.POLY_BUILDER_API_KEY || "").trim() &&
+    (process.env.POLY_BUILDER_SECRET || "").trim() &&
+    (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+  if (key && hasBuilderCreds && !gaslessApprovalDone) {
+    const gasless = await ensureAllowanceGasless(key);
+    if (gasless.ok) {
+      gaslessApprovalDone = true;
+      console.log("[polymarket] Gasless USDC.e approval done.");
+    } else if (gasless.message) {
+      console.warn("[polymarket] Gasless approval failed or skipped:", gasless.message, "— Set POLYGON_RPC_URL (e.g. Alchemy) or approve USDC.e once on polymarket.com.");
+    }
+  }
+
+  console.log("[polymarket] Placing CLOB order...");
   try {
-    const { client, Side, OrderType } = await getClient();
+    const { client, Side, OrderType } = await withTimeout(
+      getClient(),
+      60000,
+      "CLOB client / API key timed out (60s)"
+    );
 
     let marketInfo;
     try {
@@ -474,7 +571,8 @@ async function placePrediction(schedule, analysis, options = {}) {
     const negRisk = Boolean(marketInfo?.neg_risk);
 
     const price = 0.5; // Mid price; adjust if you want to limit at better odds
-    const size = Math.min(maxSizeUsd, 100);
+    const MIN_ORDER_USD = 1; // Polymarket CLOB minimum for marketable BUY
+    const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, 100));
 
     try {
       const response = await client.createAndPostOrder(
@@ -490,6 +588,12 @@ async function placePrediction(schedule, analysis, options = {}) {
 
       const orderId = response?.orderID ?? response?.orderId;
       if (!orderId) {
+        const apiErr = response?.data?.error ?? response?.error ?? "";
+        const errStr = typeof apiErr === "string" ? apiErr : "";
+        if (errStr.toLowerCase().includes("balance") || errStr.toLowerCase().includes("allowance")) {
+          return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
+        }
+        if (errStr) return { placed: false, message: `Order rejected: ${errStr}.` };
         return {
           placed: false,
           message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
@@ -517,15 +621,15 @@ async function placePrediction(schedule, analysis, options = {}) {
       if (status === 400 && (apiError || "").toLowerCase().includes("orderbook") && (apiError || "").toLowerCase().includes("does not exist")) {
         return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window.` };
       }
+      if (status === 400 && (apiError || "").toLowerCase().includes("min size")) {
+        return { placed: false, message: `Order size below Polymarket minimum ($1): ${apiError || err.message}.` };
+      }
+      if (status === 400 && ((apiError || "").toLowerCase().includes("balance") || (apiError || "").toLowerCase().includes("allowance"))) {
+        return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
+      }
       return { placed: false, message: `Order failed: ${apiError || err.message}.` };
     }
   } finally {
-    if (proxyUrl) {
-      if (prevHttpProxy !== undefined) process.env.GLOBAL_AGENT_HTTP_PROXY = prevHttpProxy;
-      else delete process.env.GLOBAL_AGENT_HTTP_PROXY;
-      if (prevHttpsProxy !== undefined) process.env.GLOBAL_AGENT_HTTPS_PROXY = prevHttpsProxy;
-      else delete process.env.GLOBAL_AGENT_HTTPS_PROXY;
-    }
     if (proxyAgent && prevDispatcher !== undefined) {
       try {
         require("undici").setGlobalDispatcher(prevDispatcher || new (require("undici").Agent)());

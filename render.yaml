@@ -1,0 +1,70 @@
+# ChartAnalytic on Render
+# Connect this repo in Render Dashboard; set env vars (Dashboard or Environment Groups).
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: chartanalytic
+    runtime: node
+    region: oregon
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npx prisma generate && npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+
+  - type: cron
+    name: polymarket-cron
+    runtime: node
+    schedule: "0,15,30,45 * * * *"
+    buildCommand: npm ci
+    startCommand: node social-agent/run.js --predict
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: POLYMARKET_PRIVATE_KEY
+        sync: false
+      - key: POLYMARKET_MAX_SIZE_USD
+        value: "1"
+      - key: POLYMARKET_MIN_CONFIDENCE
+        value: "65"
+      - key: POLYMARKET_API_KEY
+        sync: false
+      - key: POLYMARKET_API_SECRET
+        sync: false
+      - key: POLYMARKET_PASSPHRASE
+        sync: false
+      - key: PROXY_URL
+        sync: false
+
+  - type: cron
+    name: social-cron
+    runtime: node
+    schedule: "0 7,12,15,17,20 * * *"
+    buildCommand: npm ci
+    startCommand: node social-agent/run.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: X_API_KEY
+        sync: false
+      - key: X_API_SECRET
+        sync: false
+      - key: X_ACCESS_TOKEN
+        sync: false
+      - key: X_ACCESS_TOKEN_SECRET
+        sync: false
+      - key: CHART_ANALYTIC_URL
+        sync: false
+      - key: ANALYZE_IMAGE_SECRET
+        sync: false

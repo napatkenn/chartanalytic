@@ -96,18 +96,17 @@ Targets: 1.1940 → 1.1810
 #forex #trading #fx #technicalanalysis #forexsignals
 ```
 
-## Running on GitHub Actions (scheduled cron)
+## Running on Render (scheduled cron)
 
-Scheduled runs use **GitHub Actions** so no server runs 24/7.
+Scheduled runs use **Render** cron jobs defined in the repo root **`render.yaml`** (Blueprint).
 
-1. **Secrets:** In the repo go to **Settings → Secrets and variables → Actions**. Add:
-   - **Polymarket workflow:** `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`; optional: `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`, **`PROXY_URL`** (see geoblock note below), `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
-   - **Social workflow:** `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`; optional: `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
-2. **Schedules:** Workflows run on schedule (and can be triggered manually from the **Actions** tab). **Polymarket:** every 15 min (:00, :15, :30, :45 UTC). **Social:** 7, 12, 15, 17, 20 UTC.
+1. **Deploy:** In the [Render Dashboard](https://dashboard.render.com), create a **Blueprint** from this repo. Render will create the web service plus **polymarket-cron** and **social-cron** from `render.yaml`.
+2. **Env vars:** For each cron job, set environment variables in the Render Dashboard (or use an [Environment Group](https://render.com/docs/environment-groups)):
+   - **Polymarket cron:** `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`; optional: `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`, **`PROXY_URL`** (see geoblock note below), `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
+   - **Social cron:** `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`; optional: `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
+3. **Schedules:** **Polymarket:** every 15 min (:00, :15, :30, :45 UTC). **Social:** 7, 12, 15, 17, 20 UTC. You can trigger runs manually from the Render Dashboard.
 
-**Polymarket geoblock:** GitHub runners are often in the US; [Polymarket blocks orders from the US and other regions](https://docs.polymarket.com/api-reference/geoblock). Set **`PROXY_URL`** (HTTP proxy, e.g. `http://user:pass@host:port`) so requests use an allowed region. Only **HTTP** proxies are supported (not SOCKS). See **[CRON-GEOBLOCK.md](../CRON-GEOBLOCK.md)** for options (proxy, self-hosted runner, free VPS cron).
-
-See **.github/workflows/polymarket-cron.yml** and **.github/workflows/social-cron.yml**.
+**Polymarket geoblock:** Render runs in a region you choose; [Polymarket blocks orders from the US and other regions](https://docs.polymarket.com/api-reference/geoblock). If your Render region is blocked, set **`PROXY_URL`** (HTTP proxy in an allowed country, e.g. `http://user:pass@host:port`). Only **HTTP** proxies are supported (not SOCKS). See **[CRON-GEOBLOCK.md](../CRON-GEOBLOCK.md)** for options.
 
 ## Scheduling (local cron / Task Scheduler)
 

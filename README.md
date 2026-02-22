@@ -99,9 +99,30 @@ Uploaded chart images must be stored in **persistent storage** on Vercel; the se
 
 Optional: set `STORAGE_BASE_URL` in Vercel env if you want to serve uploads from a CDN (e.g. a custom domain in front of Blob).
 
-## Scheduled jobs (social agent)
+## Deploying to Render
 
-The **social agent** (TradingView capture, analysis, X posts, Polymarket predictions) runs on a schedule via **GitHub Actions**. No Render or Fly.io. Add the required secrets in the repo under **Settings → Secrets and variables → Actions** and push; workflows run at :00/:15/:30/:45 UTC (Polymarket) and 7/12/15/17/20 UTC (forex). See [social-agent/README.md](./social-agent/README.md) and `.github/workflows/*.yml`.
+The app and scheduled jobs run on **Render** using the Blueprint in `render.yaml`.
+
+1. **Connect the repo**  
+   [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint** → connect your Git repo and select the repo that contains `render.yaml`.
+
+2. **Environment variables**  
+   For each service (web + cron jobs), set the env vars in the Render Dashboard (or use an [Environment Group](https://render.com/docs/environment-groups)). Variables marked `sync: false` in `render.yaml` will prompt you to add values. Include at least:
+   - **Web service**: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and any Stripe/BoomFi/OpenAI/Blob keys you use.
+   - **Polymarket cron**: `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`, `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`; optionally `PROXY_URL`, `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
+   - **Social cron**: `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`, `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
+
+3. **Database**  
+   Use Render Postgres or an external Postgres (e.g. Neon, Supabase). Set `DATABASE_URL` on the web service. Run migrations (e.g. `npx prisma db push`) once against that database.
+
+4. **Chart uploads on Render**  
+   The web service uses the same filesystem for the request lifecycle. If you need persistent uploads across restarts, use Vercel Blob (set `BLOB_READ_WRITE_TOKEN`) or another storage and configure the app accordingly.
+
+**Scheduled jobs (social agent)**  
+- **Polymarket cron**: runs at :00, :15, :30, :45 UTC (`node social-agent/run.js --predict`).  
+- **Social cron**: runs at 07:00, 12:00, 15:00, 17:00, 20:00 UTC (`node social-agent/run.js`).  
+
+See [social-agent/README.md](./social-agent/README.md) for env vars and usage.
 
 ### If you get 404 on the root URL or other pages
 
