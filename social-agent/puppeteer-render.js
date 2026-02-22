@@ -43,22 +43,9 @@ function installChromeIfNeeded(cacheDir, projectRoot) {
   }
 }
 
-function getProxyServer() {
-  const url = (process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY || "").trim();
-  if (!url) return null;
-  // Chrome expects --proxy-server=host:port or scheme://host:port
-  try {
-    const u = new URL(url);
-    return u.host || `${u.hostname}:${u.port || (u.protocol === "https:" ? "443" : "80")}`;
-  } catch {
-    return url;
-  }
-}
-
 function getChromeLaunchOptions() {
   const args = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"];
-  const proxyServer = getProxyServer();
-  if (proxyServer) args.push(`--proxy-server=${proxyServer}`);
+  // Proxy is not used for capture (only for Polymarket API in polymarket.js) so TradingView loads direct
   const opts = { args };
   const projectRoot = path.resolve(__dirname, "..");
   const defaultCacheDir = path.join(projectRoot, ".cache", "puppeteer");

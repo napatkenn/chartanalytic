@@ -31,20 +31,7 @@ try {
   // .env optional
 }
 
-// Optional: route all HTTP/HTTPS through a proxy (e.g. to avoid Polymarket geoblock).
-const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
-if (proxyUrl && proxyUrl.trim()) {
-  const url = proxyUrl.trim();
-  process.env.GLOBAL_AGENT_HTTP_PROXY = url;
-  process.env.GLOBAL_AGENT_HTTPS_PROXY = url;
-  require("global-agent/bootstrap");
-  try {
-    const { setGlobalDispatcher, ProxyAgent } = require("undici");
-    setGlobalDispatcher(new ProxyAgent(url));
-  } catch (e) {
-    console.warn("[proxy] undici ProxyAgent not available, fetch() may not use proxy:", e.message);
-  }
-}
+// Proxy is used only for Polymarket API calls (see polymarket.js), not for capture or other traffic.
 
 const { getSchedulesForHour, getSchedulesForPolymarket, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");

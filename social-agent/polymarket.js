@@ -3,6 +3,7 @@
  * orders via CLOB using chart analysis (marketBias + confidence).
  * Requires: POLYMARKET_PRIVATE_KEY (wallet with USDC.e on Polygon), optional
  * POLYMARKET_MIN_CONFIDENCE, POLYMARKET_MAX_SIZE_USD, POLYMARKET_MARKET_SLUGS.
+ * Proxy (PROXY_URL) is used only for Polymarket API calls in this file, not for capture/OpenAI.
  */
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
@@ -10,13 +11,28 @@ const CLOB_HOST = "https://clob.polymarket.com";
 const GEOBLOCK_URL = "https://polymarket.com/api/geoblock";
 const CHAIN_ID = 137; // Polygon
 
+const proxyUrl = (process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY || "").trim();
+let proxyAgent = null;
+if (proxyUrl) {
+  try {
+    const undici = require("undici");
+    proxyAgent = new undici.ProxyAgent(proxyUrl);
+  } catch (_) {}
+}
+
+/** Fetch that uses proxy only for Polymarket API (geoblock, Gamma, CLOB). */
+function pmFetch(url, init) {
+  if (proxyAgent) return require("undici").fetch(url, { ...init, dispatcher: proxyAgent });
+  return fetch(url, init);
+}
+
 /**
  * Check if the current IP is geoblocked by Polymarket (no trading).
  * @returns {Promise<{ blocked: boolean, country?: string, region?: string }>}
  */
 async function checkGeoblock() {
   try {
-    const res = await fetch(GEOBLOCK_URL);
+    const res = await pmFetch(GEOBLOCK_URL);
     const data = await res.json().catch(() => ({}));
     return {
       blocked: Boolean(data.blocked),
@@ -85,7 +101,7 @@ function parseClobTokenIds(ids) {
  */
 async function fetchMarketBySlug(slug) {
   if (!slug || !slug.trim()) return null;
-  const res = await fetch(
+  const res = await pmFetch(
     `${GAMMA_API}/markets/slug/${encodeURIComponent(slug.trim())}`
   );
   if (!res.ok) return null;
@@ -113,7 +129,7 @@ async function fetchMarketBySlug(slug) {
 async function fetchEventBySlug(slug) {
   if (!slug || !slug.trim()) return null;
   const slugEnc = encodeURIComponent(slug.trim());
-  const res = await fetch(`${GAMMA_API}/events?slug=${slugEnc}&limit=1`);
+  const res = await pmFetch(`${GAMMA_API}/events?slug=${slugEnc}&limit=1`);
   if (!res.ok) return null;
   const data = await res.json();
   const list = Array.isArray(data) ? data : data.events || (data ? [data] : []);
@@ -166,7 +182,7 @@ async function findCryptoMarket15Min(assetKey) {
   let bestEnd = Infinity;
 
   // 1) Prefer event listing so we get the current/next window (orderbook still open)
-  const res = await fetch(
+  const res = await pmFetch(
     `${GAMMA_API}/events?active=true&closed=false&limit=100`
   );
   if (res.ok) {
@@ -211,7 +227,7 @@ async function findCryptoMarket15Min(assetKey) {
 
   // 4) Public search for "Bitcoin 15 minute" etc.
   const q = `${ASSET_SEARCH_QUERIES[assetKey] || assetKey} 15 minute`;
-  const searchRes = await fetch(
+  const searchRes = await pmFetch(
     `${GAMMA_API}/public-search?q=${encodeURIComponent(q)}&events_status=open&limit_per_type=10`
   );
   if (searchRes.ok) {
@@ -249,7 +265,7 @@ async function findCryptoMarket(assetKey) {
 
   // 2) Fallback: any active crypto market (daily/monthly etc.)
   const q = ASSET_SEARCH_QUERIES[assetKey] || assetKey;
-  const res = await fetch(
+  const res = await pmFetch(
     `${GAMMA_API}/public-search?q=${encodeURIComponent(q)}&events_status=open&limit_per_type=5`
   );
   if (!res.ok) throw new Error(`Gamma API: ${res.status}`);
@@ -264,7 +280,7 @@ async function findCryptoMarket(assetKey) {
     }
   }
 
-  const eventsRes = await fetch(
+  const eventsRes = await pmFetch(
     `${GAMMA_API}/events?active=true&closed=false&limit=50&order=volume_24hr&ascending=false`
   );
   if (eventsRes.ok) {
@@ -281,7 +297,7 @@ async function findCryptoMarket(assetKey) {
     }
   }
 
-  const marketsRes = await fetch(
+  const marketsRes = await pmFetch(
     `${GAMMA_API}/markets?active=true&closed=false&limit=100`
   );
   if (marketsRes.ok) {
@@ -427,63 +443,81 @@ async function placePrediction(schedule, analysis, options = {}) {
     };
   }
 
-  const { client, Side, OrderType } = await getClient();
-
-  let marketInfo;
-  try {
-    marketInfo = await client.getMarket(market.conditionId);
-  } catch (e) {
-    return { placed: false, message: `getMarket failed: ${e.message}.` };
+  // CLOB client uses global fetch; set proxy so order placement goes through proxy
+  let prevDispatcher;
+  if (proxyAgent) {
+    try {
+      const undici = require("undici");
+      prevDispatcher = undici.getGlobalDispatcher?.() ?? null;
+      undici.setGlobalDispatcher(proxyAgent);
+    } catch (_) {}
   }
 
-  const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
-  const negRisk = Boolean(marketInfo?.neg_risk);
-
-  const price = 0.5; // Mid price; adjust if you want to limit at better odds
-  const size = Math.min(maxSizeUsd, 100);
-
   try {
-    const response = await client.createAndPostOrder(
-      {
-        tokenID: tokenId,
-        price,
-        size,
-        side: Side.BUY, // We choose Yes or No by tokenId (first or second token)
-      },
-      { tickSize, negRisk },
-      OrderType.GTC
-    );
+    const { client, Side, OrderType } = await getClient();
 
-    const orderId = response?.orderID ?? response?.orderId;
-    if (!orderId) {
-      return {
-        placed: false,
-        message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
-      };
+    let marketInfo;
+    try {
+      marketInfo = await client.getMarket(market.conditionId);
+    } catch (e) {
+      return { placed: false, message: `getMarket failed: ${e.message}.` };
     }
 
-    return {
-      placed: true,
-      orderId,
-      message: `Placed ${sideInfo.side} $${size} on "${market.question}" (order ${orderId}).`,
-    };
-  } catch (err) {
-    const status = err.response?.status ?? err.status;
-    const body = err.response?.data ?? err.data;
-    const apiError = typeof body?.error === "string" ? body.error : err.message;
-    if (status === 403 || (apiError && apiError.toLowerCase().includes("restricted"))) {
+    const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
+    const negRisk = Boolean(marketInfo?.neg_risk);
+
+    const price = 0.5; // Mid price; adjust if you want to limit at better odds
+    const size = Math.min(maxSizeUsd, 100);
+
+    try {
+      const response = await client.createAndPostOrder(
+        {
+          tokenID: tokenId,
+          price,
+          size,
+          side: Side.BUY, // We choose Yes or No by tokenId (first or second token)
+        },
+        { tickSize, negRisk },
+        OrderType.GTC
+      );
+
+      const orderId = response?.orderID ?? response?.orderId;
+      if (!orderId) {
+        return {
+          placed: false,
+          message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+        };
+      }
+
       return {
-        placed: false,
-        message: `Trading restricted in your region (geoblock). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+        placed: true,
+        orderId,
+        message: `Placed ${sideInfo.side} $${size} on "${market.question}" (order ${orderId}).`,
       };
+    } catch (err) {
+      const status = err.response?.status ?? err.status;
+      const body = err.response?.data ?? err.data;
+      const apiError = typeof body?.error === "string" ? body.error : err.message;
+      if (status === 403 || (apiError && apiError.toLowerCase().includes("restricted"))) {
+        return {
+          placed: false,
+          message: `Trading restricted in your region (geoblock). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+        };
+      }
+      if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
+        return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
+      }
+      if (status === 400 && (apiError || "").toLowerCase().includes("orderbook") && (apiError || "").toLowerCase().includes("does not exist")) {
+        return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window.` };
+      }
+      return { placed: false, message: `Order failed: ${apiError || err.message}.` };
     }
-    if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
-      return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
+  } finally {
+    if (proxyAgent && prevDispatcher !== undefined) {
+      try {
+        require("undici").setGlobalDispatcher(prevDispatcher || new (require("undici").Agent)());
+      } catch (_) {}
     }
-    if (status === 400 && (apiError || "").toLowerCase().includes("orderbook") && (apiError || "").toLowerCase().includes("does not exist")) {
-      return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window.` };
-    }
-    return { placed: false, message: `Order failed: ${apiError || err.message}.` };
   }
 }
 
