@@ -442,10 +442,14 @@ async function ensureAllowanceGasless(privateKey) {
 
     const account = privateKeyToAccount(privateKey);
     const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-bor-rpc.publicnode.com";
+    const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
+    const transportOptions = apiKey
+      ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
+      : {};
     const wallet = createWalletClient({
       account,
       chain: polygon,
-      transport: http(rpc),
+      transport: http(rpc, transportOptions),
     });
     const builderConfig = new BuilderConfig({
       localBuilderCreds: { key, secret, passphrase },
