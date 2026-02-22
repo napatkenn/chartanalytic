@@ -31,64 +31,19 @@ try {
   // .env optional
 }
 
-// Proxy bootstrap is done inside main() so we can resolve PROXY_LIST_URL first (async).
-
-const GEOBLOCK_CHECK_URL = "https://polymarket.com/api/geoblock";
-
-/**
- * Try one proxy: GET geoblock API through it. Returns { blocked, country } or null on error.
- */
-async function checkGeoblockViaProxy(proxyUrl) {
-  const https = require("https");
-  const { HttpsProxyAgent } = require("https-proxy-agent");
-  return new Promise((resolve) => {
-    const agent = new HttpsProxyAgent(proxyUrl);
-    const url = new URL(GEOBLOCK_CHECK_URL);
-    const req = https.get(GEOBLOCK_CHECK_URL, { agent }, (res) => {
-      let body = "";
-      res.on("data", (c) => (body += c));
-      res.on("end", () => {
-        try {
-          const data = JSON.parse(body);
-          resolve({ blocked: Boolean(data.blocked), country: data.country });
-        } catch {
-          resolve(null);
-        }
-      });
-    });
-    req.on("error", () => resolve(null));
-    req.setTimeout(8000, () => {
-      req.destroy();
-      resolve(null);
-    });
-  });
-}
-
-/**
- * Fetch proxy list from URL (one host:port per line), try each until geoblock returns not blocked.
- * Returns first working proxy URL (http://host:port) or null.
- */
-async function selectProxyFromList(listUrl, maxTry = 50) {
+// Optional: route all HTTP/HTTPS through a proxy (e.g. to avoid Polymarket geoblock).
+const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+if (proxyUrl && proxyUrl.trim()) {
+  const url = proxyUrl.trim();
+  process.env.GLOBAL_AGENT_HTTP_PROXY = url;
+  process.env.GLOBAL_AGENT_HTTPS_PROXY = url;
+  require("global-agent/bootstrap");
   try {
-    const res = await fetch(listUrl);
-    const text = await res.text();
-    const lines = text
-      .split(/\r?\n/)
-      .map((s) => s.trim())
-      .filter((s) => s && !s.startsWith("#") && /^[\d.]+:\d+$/.test(s));
-    const toTry = lines.slice(0, maxTry);
-    for (const line of toTry) {
-      const proxyUrl = `http://${line}`;
-      const geo = await checkGeoblockViaProxy(proxyUrl);
-      if (geo && !geo.blocked) {
-        console.log(`[proxy] Using ${proxyUrl} (country: ${geo.country || "?"})`);
-        return proxyUrl;
-      }
-    }
-  } catch (err) {
-    console.warn("[proxy] Failed to use proxy list:", err.message);
+    const { setGlobalDispatcher, ProxyAgent } = require("undici");
+    setGlobalDispatcher(new ProxyAgent(url));
+  } catch (e) {
+    console.warn("[proxy] undici ProxyAgent not available, fetch() may not use proxy:", e.message);
   }
-  return null;
 }
 
 const { getSchedulesForHour, getSchedulesForPolymarket, getScheduleById, SCHEDULES } = require("./config");
@@ -166,28 +121,6 @@ async function runOne(schedule, options = {}) {
 }
 
 async function main() {
-  // Resolve proxy: use PROXY_LIST_URL to pick first proxy that passes Polymarket geoblock (if no PROXY_URL set)
-  let proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
-  const listUrl = (process.env.PROXY_LIST_URL || "").trim();
-  if (!proxyUrl?.trim() && listUrl) {
-    const chosen = await selectProxyFromList(listUrl);
-    if (chosen) process.env.PROXY_URL = chosen;
-    proxyUrl = process.env.PROXY_URL;
-  }
-  if (proxyUrl && proxyUrl.trim()) {
-    const url = proxyUrl.trim();
-    process.env.GLOBAL_AGENT_HTTP_PROXY = url;
-    process.env.GLOBAL_AGENT_HTTPS_PROXY = url;
-    require("global-agent/bootstrap");
-    // Node 18+ fetch() uses undici and ignores global-agent; patch it so fetch() uses the proxy too
-    try {
-      const { setGlobalDispatcher, ProxyAgent } = require("undici");
-      setGlobalDispatcher(new ProxyAgent(url));
-    } catch (e) {
-      console.warn("[proxy] undici ProxyAgent not available, fetch() may not use proxy:", e.message);
-    }
-  }
-
   const args = process.argv.slice(2);
   const skipAnalyze = args.includes("--no-analyze");
   const dryRun = args.includes("--dry-run");

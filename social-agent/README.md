@@ -101,11 +101,11 @@ Targets: 1.1940 → 1.1810
 Scheduled runs use **GitHub Actions** so no server runs 24/7.
 
 1. **Secrets:** In the repo go to **Settings → Secrets and variables → Actions**. Add:
-   - **Polymarket workflow:** `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`; optional: `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`, **`PROXY_URL`** or **`PROXY_LIST_URL`** (see geoblock note below), `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
+   - **Polymarket workflow:** `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`; optional: `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`, **`PROXY_URL`** (see geoblock note below), `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
    - **Social workflow:** `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`; optional: `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
 2. **Schedules:** Workflows run on schedule (and can be triggered manually from the **Actions** tab). **Polymarket:** every 15 min (:00, :15, :30, :45 UTC). **Social:** 7, 12, 15, 17, 20 UTC.
 
-**Polymarket geoblock:** GitHub runners are often in the US; [Polymarket blocks orders from the US and other regions](https://docs.polymarket.com/api-reference/geoblock). Use **`PROXY_URL`** (single HTTP proxy) or **`PROXY_LIST_URL`** (URL of a text file with `host:port` per line; the app tries each until one passes the geoblock check). Only **HTTP** proxies are supported (not SOCKS). See **[CRON-GEOBLOCK.md](../CRON-GEOBLOCK.md)** for options (proxy list, self-hosted runner, free VPS cron).
+**Polymarket geoblock:** GitHub runners are often in the US; [Polymarket blocks orders from the US and other regions](https://docs.polymarket.com/api-reference/geoblock). Set **`PROXY_URL`** (HTTP proxy, e.g. `http://user:pass@host:port`) so requests use an allowed region. Only **HTTP** proxies are supported (not SOCKS). See **[CRON-GEOBLOCK.md](../CRON-GEOBLOCK.md)** for options (proxy, self-hosted runner, free VPS cron).
 
 See **.github/workflows/polymarket-cron.yml** and **.github/workflows/social-cron.yml**.
 

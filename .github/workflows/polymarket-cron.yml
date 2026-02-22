@@ -5,9 +5,8 @@
 name: Polymarket cron
 
 on:
-  # Schedule paused — uncomment below to run every 15 min
-  # schedule:
-  #   - cron: "0,15,30,45 * * * *"
+  schedule:
+    - cron: "0,15,30,45 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -23,7 +22,6 @@ jobs:
       POLYMARKET_API_SECRET: ${{ secrets.POLYMARKET_API_SECRET }}
       POLYMARKET_PASSPHRASE: ${{ secrets.POLYMARKET_PASSPHRASE }}
       PROXY_URL: ${{ secrets.PROXY_URL }}
-      PROXY_LIST_URL: ${{ secrets.PROXY_LIST_URL }}
     steps:
       - uses: actions/checkout@v4
 

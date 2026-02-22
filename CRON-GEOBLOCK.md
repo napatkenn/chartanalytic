@@ -13,12 +13,8 @@ Keep using GitHub Actions and send **all outbound HTTP/HTTPS** (including the [g
 **Only HTTP proxies are supported** (not SOCKS4/SOCKS5). Use a proxy URL like `http://host:port`.
 
 1. Get an **HTTP** proxy whose exit IP is in an allowed region. Polymarket’s docs mention **eu-west-1** (Ireland) as a non-georestricted region; other allowed countries include Netherlands, Spain, Canada (outside Ontario), etc.
-2. In the repo: **Settings → Secrets and variables → Actions**, add either:
-   - **`PROXY_URL`** = a single proxy URL, e.g. `http://proxy.example.com:8080`, or
-   - **`PROXY_LIST_URL`** = URL of a text file with one proxy per line (`host:port`). The app fetches the list, tries each proxy against Polymarket’s geoblock API, and uses the **first one that is not blocked**. Example (public list, updated periodically):  
-     `https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt`  
-     You don’t need to know which line works; the run picks one automatically (tries up to 50 lines).
-3. The Polymarket workflow forwards both `PROXY_URL` and `PROXY_LIST_URL`; the app uses [global-agent](https://github.com/gajus/global-agent) so every `fetch()` (geoblock, Gamma, CLOB) goes through the chosen proxy.
+2. In the repo: **Settings → Secrets and variables → Actions**, add **`PROXY_URL`** = your proxy URL, e.g. `http://user:pass@host:port` or `http://host:port`.
+3. The Polymarket workflow forwards `PROXY_URL`; the app uses [global-agent](https://github.com/gajus/global-agent) and undici so every `fetch()` (geoblock, Gamma, CLOB) goes through the proxy.
 
 **Proxy options (examples, not endorsement):**
 
