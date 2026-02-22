@@ -398,7 +398,26 @@ async function getClient() {
     }
   }
 
-  const client = new ClobClient(CLOB_HOST, CHAIN_ID, signer, apiCreds, 0, signer.address);
+  // When using gasless relayer, the approval runs in the proxy's context, so the proxy holds allowance.
+  // The CLOB must use the proxy as funder (and signature type 2) so balance/allowance checks pass.
+  const hasBuilderCreds =
+    (process.env.POLY_BUILDER_API_KEY || "").trim() &&
+    (process.env.POLY_BUILDER_SECRET || "").trim() &&
+    (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+  let signatureType = 0;
+  let funderAddress = signer.address;
+  if (hasBuilderCreds) {
+    try {
+      const { deriveProxyWallet } = require("@polymarket/builder-relayer-client/dist/builder/derive");
+      const { getContractConfig } = require("@polymarket/builder-relayer-client/dist/config");
+      const proxyFactory = getContractConfig(CHAIN_ID).ProxyContracts.ProxyFactory;
+      funderAddress = deriveProxyWallet(signer.address, proxyFactory);
+      signatureType = 2; // GNOSIS_SAFE / proxy wallet per Polymarket CLOB docs
+    } catch (_) {
+      // fallback: keep EOA as funder
+    }
+  }
+  const client = new ClobClient(CLOB_HOST, CHAIN_ID, signer, apiCreds, signatureType, funderAddress);
   return { client, Side, OrderType };
 }
 
@@ -574,11 +593,14 @@ async function placePrediction(schedule, analysis, options = {}) {
     if (gasless.ok) {
       gaslessApprovalDone = true;
       console.log("[polymarket] Gasless USDC.e approval done.");
+      // Give chain/indexer a moment so CLOB sees the new allowance
+      await new Promise((r) => setTimeout(r, 5000));
     } else if (gasless.message) {
       console.warn("[polymarket] Gasless approval failed or skipped:", gasless.message, "— Set POLYGON_RPC_URL (e.g. Alchemy) or approve USDC.e once on polymarket.com.");
     }
   }
 
+  // Gasless only did the on-chain approval; the actual prediction is placed via CLOB order below.
   console.log("[polymarket] Placing CLOB order...");
   try {
     const getClientWithRetry = () => withTimeout(getClient(), 60000, "CLOB client / API key timed out (60s)");
@@ -597,13 +619,14 @@ async function placePrediction(schedule, analysis, options = {}) {
     const price = 0.5; // Mid price; adjust if you want to limit at better odds
     const MIN_ORDER_USD = 1; // Polymarket CLOB minimum for marketable BUY
     const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, 100));
+    const sizeForOrder = Number(size) >= 1 ? Number(size) : 1;
 
     try {
       const response = await client.createAndPostOrder(
         {
           tokenID: tokenId,
           price,
-          size,
+          size: sizeForOrder,
           side: Side.BUY, // We choose Yes or No by tokenId (first or second token)
         },
         { tickSize, negRisk },
@@ -615,7 +638,10 @@ async function placePrediction(schedule, analysis, options = {}) {
         const apiErr = response?.data?.error ?? response?.error ?? "";
         const errStr = typeof apiErr === "string" ? apiErr : "";
         if (errStr.toLowerCase().includes("balance") || errStr.toLowerCase().includes("allowance")) {
-          return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
+          const gaslessTip = hasBuilderCreds
+            ? " With gasless, the CLOB uses your proxy wallet as funder — deposit USDC.e on polymarket.com (so the proxy has balance) then retry."
+            : " Approve USDC.e once on polymarket.com or use gasless relayer.";
+          return { placed: false, message: `Not enough USDC.e balance or allowance.${gaslessTip}` };
         }
         if (errStr) return { placed: false, message: `Order rejected: ${errStr}.` };
         return {
