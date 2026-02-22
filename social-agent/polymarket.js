@@ -441,7 +441,7 @@ async function ensureAllowanceGasless(privateKey) {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://rpc.ankr.com/polygon";
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-bor-rpc.publicnode.com";
     const wallet = createWalletClient({
       account,
       chain: polygon,
