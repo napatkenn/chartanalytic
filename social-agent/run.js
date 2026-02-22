@@ -31,7 +31,8 @@ try {
   // .env optional
 }
 
-// Proxy is used only for Polymarket API calls (see polymarket.js), not for capture or other traffic.
+// Bootstrap global-agent so http/https can be proxied when env is set (polymarket.js sets it only during CLOB calls).
+require("global-agent/bootstrap");
 
 const { getSchedulesForHour, getSchedulesForPolymarket, getScheduleById, SCHEDULES } = require("./config");
 const { captureChart } = require("./capture");

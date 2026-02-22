@@ -443,7 +443,14 @@ async function placePrediction(schedule, analysis, options = {}) {
     };
   }
 
-  // CLOB client uses global fetch; set proxy so order placement goes through proxy
+  // CLOB client uses axios (http module), not fetch. Set global-agent proxy env so axios requests go through proxy.
+  const prevHttpProxy = process.env.GLOBAL_AGENT_HTTP_PROXY;
+  const prevHttpsProxy = process.env.GLOBAL_AGENT_HTTPS_PROXY;
+  if (proxyUrl) {
+    process.env.GLOBAL_AGENT_HTTP_PROXY = proxyUrl;
+    process.env.GLOBAL_AGENT_HTTPS_PROXY = proxyUrl;
+  }
+  // Also set undici global dispatcher for any fetch used by CLOB
   let prevDispatcher;
   if (proxyAgent) {
     try {
@@ -513,6 +520,12 @@ async function placePrediction(schedule, analysis, options = {}) {
       return { placed: false, message: `Order failed: ${apiError || err.message}.` };
     }
   } finally {
+    if (proxyUrl) {
+      if (prevHttpProxy !== undefined) process.env.GLOBAL_AGENT_HTTP_PROXY = prevHttpProxy;
+      else delete process.env.GLOBAL_AGENT_HTTP_PROXY;
+      if (prevHttpsProxy !== undefined) process.env.GLOBAL_AGENT_HTTPS_PROXY = prevHttpsProxy;
+      else delete process.env.GLOBAL_AGENT_HTTPS_PROXY;
+    }
     if (proxyAgent && prevDispatcher !== undefined) {
       try {
         require("undici").setGlobalDispatcher(prevDispatcher || new (require("undici").Agent)());
