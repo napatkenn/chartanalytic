@@ -33,6 +33,9 @@ services:
         sync: false
       - key: POLYMARKET_PRIVATE_KEY
         sync: false
+      # Optional: wallet you see on polymarket.com (e.g. 0xa917...). Set if you fund via the website.
+      - key: POLYMARKET_FUNDER_ADDRESS
+        sync: false
       - key: POLYMARKET_MAX_SIZE_USD
         value: "1"
       - key: POLYMARKET_MIN_CONFIDENCE

@@ -121,9 +121,10 @@ Scheduled runs use **Render** cron jobs defined in the repo root **`render.yaml`
 
 For **BTC**, **ETH**, and **SOL** 1-minute schedules you can place predictions on [Polymarket](https://polymarket.com) based on the chart analysis (bullish/bearish + confidence).
 
-1. **Wallet:** Create or use an Ethereum wallet; fund it with **USDC.e on Polygon** (and a little POL for gas). Export the **private key** (0x...).
+1. **Wallet:** Create or use an Ethereum wallet; fund it with **USDC.e on Polygon** (and a little POL for gas). Export the **private key** (0x...). If you log in at polymarket.com and fund the **wallet address shown there** (often different from your EOA), set that address as `POLYMARKET_FUNDER_ADDRESS` so the bot uses it as the CLOB funder.
 2. **Env:** In `.env` set:
    - `POLYMARKET_PRIVATE_KEY=0x...` (required to place orders)
+   - `POLYMARKET_FUNDER_ADDRESS=0x...` (optional; the wallet you see and fund on polymarket.com — use this if you fund via the website)
    - `POLYMARKET_MIN_CONFIDENCE=65` (optional; default 65 — only predict when analysis confidence ≥ this)
    - `POLYMARKET_MAX_SIZE_USD=10` (optional; max $ per order)
 3. **Run:** Use `--predict` when running a crypto schedule so that after analysis the bot looks up a matching Polymarket market (e.g. “Bitcoin”) and places a limit order: **Yes** if bullish, **No** if bearish (skips if bias is “range” or confidence is below threshold).

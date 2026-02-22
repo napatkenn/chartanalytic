@@ -398,21 +398,25 @@ async function getClient() {
     }
   }
 
-  // When using gasless relayer, the approval runs in the proxy's context, so the proxy holds allowance.
-  // The CLOB must use the proxy as funder (and signature type 2) so balance/allowance checks pass.
+  // Funder = address that holds USDC.e for the order. Use POLYMARKET_FUNDER_ADDRESS if set (the wallet
+  // you see and fund on polymarket.com — different from the relayer's proxy 0xB32...).
+  const envFunder = (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim();
   const hasBuilderCreds =
     (process.env.POLY_BUILDER_API_KEY || "").trim() &&
     (process.env.POLY_BUILDER_SECRET || "").trim() &&
     (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
   let signatureType = 0;
   let funderAddress = signer.address;
-  if (hasBuilderCreds) {
+  if (envFunder && envFunder.startsWith("0x") && envFunder.length === 42) {
+    funderAddress = envFunder;
+    signatureType = 2; // Proxy/Gnosis Safe — wallet shown on polymarket.com
+  } else if (hasBuilderCreds) {
     try {
       const { deriveProxyWallet } = require("@polymarket/builder-relayer-client/dist/builder/derive");
       const { getContractConfig } = require("@polymarket/builder-relayer-client/dist/config");
       const proxyFactory = getContractConfig(CHAIN_ID).ProxyContracts.ProxyFactory;
       funderAddress = deriveProxyWallet(signer.address, proxyFactory);
-      signatureType = 2; // GNOSIS_SAFE / proxy wallet per Polymarket CLOB docs
+      signatureType = 2;
     } catch (_) {
       // fallback: keep EOA as funder
     }
@@ -588,7 +592,10 @@ async function placePrediction(schedule, analysis, options = {}) {
     (process.env.POLY_BUILDER_API_KEY || "").trim() &&
     (process.env.POLY_BUILDER_SECRET || "").trim() &&
     (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
-  if (key && hasBuilderCreds && !gaslessApprovalDone) {
+  const usingSiteFunder = (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim().startsWith("0x");
+  // Only run gasless when using the relayer's proxy as funder. When POLYMARKET_FUNDER_ADDRESS is set,
+  // the user funds the Polymarket site wallet (different address); no gasless needed.
+  if (key && hasBuilderCreds && !usingSiteFunder && !gaslessApprovalDone) {
     const gasless = await ensureAllowanceGasless(key);
     if (gasless.ok) {
       gaslessApprovalDone = true;
