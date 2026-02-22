@@ -31,6 +31,29 @@ function pmFetch(url, init) {
   return fetch(url, init);
 }
 
+/** Retry a fetch-based fn a few times on network failure (e.g. Render transient "fetch failed"). */
+async function withFetchRetry(fn, opts = {}) {
+  const { retries = 2, delayMs = 2000 } = opts;
+  let lastErr;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      const msg = (e?.message || String(e)).toLowerCase();
+      const cause = (e?.cause?.message || e?.cause?.code || "").toLowerCase();
+      const isNetwork = msg.includes("fetch failed") || /econnrefused|etimedout|enotfound|eai_again|network|socket/i.test(msg + cause);
+      if (i < retries && isNetwork) {
+        if (i > 0) console.warn("[polymarket] Retry after network error:", e.message);
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * Check if the current IP is geoblocked by Polymarket (no trading).
  * @returns {Promise<{ blocked: boolean, country?: string, region?: string }>}
@@ -494,7 +517,7 @@ async function placePrediction(schedule, analysis, options = {}) {
     return { placed: false, message: "Market bias is range; no prediction." };
   }
 
-  const market = await findCryptoMarket(assetKey);
+  const market = await withFetchRetry(() => findCryptoMarket(assetKey), { retries: 2, delayMs: 2000 });
   if (!market) {
     return { placed: false, message: `No active Polymarket found for ${assetKey}.` };
   }
@@ -511,7 +534,7 @@ async function placePrediction(schedule, analysis, options = {}) {
     };
   }
 
-  const geo = await checkGeoblock();
+  const geo = await withFetchRetry(checkGeoblock, { retries: 2, delayMs: 2000 });
   if (geo.blocked) {
     return {
       placed: false,
@@ -554,11 +577,8 @@ async function placePrediction(schedule, analysis, options = {}) {
 
   console.log("[polymarket] Placing CLOB order...");
   try {
-    const { client, Side, OrderType } = await withTimeout(
-      getClient(),
-      60000,
-      "CLOB client / API key timed out (60s)"
-    );
+    const getClientWithRetry = () => withTimeout(getClient(), 60000, "CLOB client / API key timed out (60s)");
+    const { client, Side, OrderType } = await withFetchRetry(getClientWithRetry, { retries: 2, delayMs: 2000 });
 
     let marketInfo;
     try {

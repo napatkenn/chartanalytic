@@ -109,7 +109,7 @@ The app and scheduled jobs run on **Render** using the Blueprint in `render.yaml
 2. **Environment variables**  
    For each service (web + cron jobs), set the env vars in the Render Dashboard (or use an [Environment Group](https://render.com/docs/environment-groups)). Variables marked `sync: false` in `render.yaml` will prompt you to add values. Include at least:
    - **Web service**: `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and any Stripe/BoomFi/OpenAI/Blob keys you use.
-   - **Polymarket cron**: `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`, `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`; optionally `PROXY_URL`, `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
+   - **Polymarket cron**: `OPENAI_API_KEY`, `POLYMARKET_PRIVATE_KEY`, `POLYMARKET_API_KEY`, `POLYMARKET_API_SECRET`, `POLYMARKET_PASSPHRASE`; **`PROXY_URL`** (required on Render — Polymarket blocks US; use an HTTP proxy in an allowed region, e.g. EU); optionally `POLYMARKET_MAX_SIZE_USD`, `POLYMARKET_MIN_CONFIDENCE`.
    - **Social cron**: `OPENAI_API_KEY`, `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET`, `CHART_ANALYTIC_URL`, `ANALYZE_IMAGE_SECRET`.
 
 3. **Database**  

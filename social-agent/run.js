@@ -81,7 +81,13 @@ async function runOne(schedule, options = {}) {
         console.log(`[${schedule.id}] Polymarket:`, result.message);
         if (result.placed) console.log(`[${schedule.id}] Order ID:`, result.orderId);
       } catch (err) {
-        console.error(`[${schedule.id}] Polymarket error:`, err.message);
+        const cause = err.cause?.message || err.cause?.code || (err.cause ? String(err.cause) : "");
+        const detail = cause ? ` (${cause})` : "";
+        console.error(`[${schedule.id}] Polymarket error:`, err.message + detail);
+        const isNetwork = err.message === "fetch failed" || (cause && /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN/i.test(String(cause)));
+        if (isNetwork) {
+          console.warn(`[${schedule.id}] Tip: Render's default region (US) is blocked by Polymarket. Set PROXY_URL in the Render Dashboard to an HTTP proxy in an allowed region (e.g. EU). See CRON-GEOBLOCK.md`);
+        }
       }
     }
   }

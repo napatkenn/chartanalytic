@@ -19,6 +19,7 @@ services:
       - key: NEXTAUTH_URL
         sync: false
 
+  # Polymarket runs in Render's region (e.g. Oregon = US). Polymarket blocks US — set PROXY_URL to an HTTP proxy in an allowed region (e.g. EU).
   - type: cron
     name: polymarket-cron
     runtime: node
