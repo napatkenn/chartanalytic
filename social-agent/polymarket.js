@@ -360,20 +360,14 @@ async function getClient() {
 
 /**
  * Map chart analysis to Polymarket side and token.
- * We place the opposite of the AI: AI says up (bullish) → buy down (NO). AI says down (bearish) → buy up (YES).
- * - Bullish → Buy NO (second token). Bearish → Buy YES (first token). Range → skip.
- * - Optionally invert if market question is phrased as "below X" (then bearish = Yes).
+ * Follow the AI: AI says up (bullish) → buy YES. AI says down (bearish) → buy NO. Range → skip.
  */
 function analysisToSide(analysis, marketQuestion) {
   const bias = (analysis.marketBias || "range").toLowerCase();
   if (bias === "range") return null;
 
-  const q = (marketQuestion || "").toLowerCase();
-  const isInverted = q.includes("below") || q.includes("under") || q.includes("drop");
-
-  // Opposite of AI: bullish (AI says up) → we buy down (NO); bearish (AI says down) → we buy up (YES)
-  if (bias === "bullish") return { side: isInverted ? "YES" : "NO", tokenIndex: isInverted ? 0 : 1 };
-  if (bias === "bearish") return { side: isInverted ? "NO" : "YES", tokenIndex: isInverted ? 1 : 0 };
+  if (bias === "bullish") return { side: "YES", tokenIndex: 0 };
+  if (bias === "bearish") return { side: "NO", tokenIndex: 1 };
   return null;
 }
 
@@ -463,7 +457,7 @@ function withTimeout(promise, ms, message) {
 async function placePrediction(schedule, analysis, options = {}) {
   const dryRun = options.dryRun === true;
   const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 65;
-  const MIN_ORDER_USD = 5; // Polymarket CLOB minimum (e.g. $5 for marketable BUY)
+  const MIN_ORDER_USD = 10;
   const MAX_ORDER_USD = 10;
   const maxSizeUsd = Math.max(MIN_ORDER_USD, Math.min(MAX_ORDER_USD, Number(process.env.POLYMARKET_MAX_SIZE_USD) || MAX_ORDER_USD));
 
