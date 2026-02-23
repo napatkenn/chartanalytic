@@ -154,10 +154,33 @@ async function main() {
     }
   }
 
-  // Longer delay between captures in predict mode to avoid TradingView 403 rate-limit on 2nd/3rd/4th chart
-  const delayBetweenCapturesMs = doPredict ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
+  // In predict mode with multiple assets, run in parallel unless CAPTURE_PARALLEL=false
+  const parallel =
+    doPredict &&
+    schedules.length > 1 &&
+    process.env.CAPTURE_PARALLEL !== "false" &&
+    process.env.CAPTURE_PARALLEL !== "0";
+  const delayBetweenCapturesMs =
+    doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
   const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 30000;
   const maxAttempts = 3;
+
+  if (parallel && schedules.length > 1) {
+    console.log("Running all assets in parallel.");
+    const opts = { skipAnalyze, dryRun, doPredict };
+    const results = await Promise.allSettled(
+      schedules.map((schedule) => runOne(schedule, opts))
+    );
+    let hasFailure = false;
+    results.forEach((out, i) => {
+      if (out.status === "rejected") {
+        hasFailure = true;
+        console.error(`[${schedules[i].id}] Error:`, out.reason?.message || out.reason);
+      }
+    });
+    if (hasFailure) process.exitCode = 1;
+    return;
+  }
 
   for (let i = 0; i < schedules.length; i++) {
     if (i > 0 && delayBetweenCapturesMs > 0) {
