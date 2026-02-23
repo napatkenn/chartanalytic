@@ -559,7 +559,6 @@ async function placePrediction(schedule, analysis, options = {}) {
     const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
     const negRisk = Boolean(marketInfo?.neg_risk);
 
-    const price = 0.5; // Mid price; adjust if you want to limit at better odds
     const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, 100));
     const sizeForOrder = Number(size) >= MIN_ORDER_USD ? Number(size) : MIN_ORDER_USD;
 
@@ -593,6 +592,17 @@ async function placePrediction(schedule, analysis, options = {}) {
 
       const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
       const negRisk = Boolean(marketInfo?.neg_risk);
+
+      // Use best ask (market price for BUY) so order fills at current market; fallback to 0.5 if unavailable
+      let price = 0.5;
+      try {
+        const priceRes = await client.getPrice(currentTokenId, "BUY");
+        const p = typeof priceRes === "number" ? priceRes : (priceRes?.price != null ? Number(priceRes.price) : NaN);
+        if (Number.isFinite(p) && p > 0 && p <= 1) price = p;
+      } catch (_) {}
+      const tick = parseFloat(tickSize) || 0.01;
+      price = Math.round(price / tick) * tick;
+      price = Math.max(tick, Math.min(1, price));
 
       try {
         const response = await client.createAndPostOrder(
@@ -631,7 +641,7 @@ async function placePrediction(schedule, analysis, options = {}) {
         return {
           placed: true,
           orderId,
-          message: `Placed ${sideInfo.side} $${size} on "${currentMarket.question}" (order ${orderId}).`,
+          message: `Placed ${sideInfo.side} $${size} at ${price} on "${currentMarket.question}" (order ${orderId}).`,
         };
       } catch (err) {
         const status = err.response?.status ?? err.status;
