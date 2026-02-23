@@ -490,7 +490,22 @@ async function claimResolvedPositions() {
       return;
     }
 
-    const conditionIds = [...new Set(positions.map((p) => p.conditionId).filter(Boolean))];
+    // Build per-condition list of winning index sets only (redeemable = winning).
+    // CTF: outcomeIndex 0 → indexSet 1 (Yes), outcomeIndex 1 → indexSet 2 (No).
+    const conditionToIndexSets = new Map();
+    for (const p of positions) {
+      const cid = p.conditionId;
+      if (!cid) continue;
+      if (!conditionToIndexSets.has(cid)) conditionToIndexSets.set(cid, new Set());
+      const oi = p.outcomeIndex;
+      if (typeof oi === "number") {
+        const indexSet = oi === 1 ? 2 : 1; // outcomeIndex 0 → 1, 1 → 2
+        conditionToIndexSets.get(cid).add(indexSet);
+      } else {
+        conditionToIndexSets.get(cid).add(1).add(2); // fallback: both outcomes
+      }
+    }
+    const conditionIds = [...conditionToIndexSets.keys()];
     if (conditionIds.length === 0) return;
 
     const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
@@ -542,10 +557,12 @@ async function claimResolvedPositions() {
 
     for (const conditionId of conditionIds) {
       try {
+        const indexSets = [...(conditionToIndexSets.get(conditionId) || [])].sort((a, b) => a - b);
+        if (indexSets.length === 0) continue;
         const data = encodeFunctionData({
           abi: redeemAbi,
           functionName: "redeemPositions",
-          args: [USDC_E, PARENT_COLLECTION_ID, conditionId, [1, 2]],
+          args: [USDC_E, PARENT_COLLECTION_ID, conditionId, indexSets],
         });
         const response = await client.execute(
           [{ to: CTF_SPENDER, data, value: "0" }],
@@ -784,20 +801,6 @@ async function placePrediction(schedule, analysis, options = {}) {
         }
         const errText = (apiError || err.message || "").toLowerCase();
         if (status === 400 && errText.includes("orderbook") && (errText.includes("does not exist") || errText.includes("doesn't exist"))) {
-      if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
-        return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
-      }
-      const errText = (apiError || err.message || "").toLowerCase();
-      if (status === 400 && errText.includes("orderbook") && (errText.includes("does not exist") || errText.includes("doesn't exist"))) {
-        return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window from tag-filtered events.` };
-      }
-      if (status === 400 && (apiError || "").toLowerCase().includes("min size")) {
-        return { placed: false, message: `Order size below Polymarket minimum ($${MIN_ORDER_USD}): ${apiError || err.message}.` };
-      }
-      if (status === 400 && ((apiError || "").toLowerCase().includes("balance") || (apiError || "").toLowerCase().includes("allowance"))) {
-        return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
-      }
-      return { placed: false, message: `Order failed: ${apiError || err.message}.` };
           if (attempt === 0) continue;
           return { placed: false, message: `Market window closed (orderbook expired). No other current 15m window found.` };
         }
