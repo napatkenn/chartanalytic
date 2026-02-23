@@ -542,6 +542,7 @@ async function placePrediction(schedule, analysis, options = {}) {
 
   // Gasless only did the on-chain approval; the actual prediction is placed via CLOB order below.
   console.log("[polymarket] Placing CLOB order...");
+  await new Promise((r) => setTimeout(r, 5000));
   try {
     const getClientWithRetry = () => withTimeout(getClient(), 60000, "CLOB client / API key timed out (60s)");
     const { client, Side, OrderType } = await withFetchRetry(getClientWithRetry, { retries: 2, delayMs: 2000 });
@@ -599,7 +600,7 @@ async function placePrediction(schedule, analysis, options = {}) {
       } catch (_) {}
       const tick = parseFloat(tickSize) || 0.01;
       price = Math.round(price / tick) * tick;
-      price = Math.max(tick, Math.min(1, price));
+      price = Math.max(tick, Math.min(0.99, price));
 
       try {
         const response = await client.createAndPostOrder(
