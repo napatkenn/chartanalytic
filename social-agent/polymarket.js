@@ -422,8 +422,8 @@ async function ensureAllowanceGasless(privateKey) {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    // Default: public RPC (no API key). Set POLYGON_RPC_URL for a dedicated provider if needed.
-    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://rpc.ankr.com/polygon";
+    // Default: Tatum Polygon RPC. Set POLYGON_RPC_URL / TATUM_API_KEY (or POLYGON_RPC_API_KEY) in .env.
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-mainnet.gateway.tatum.io";
     const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
     const transportOptions = apiKey
       ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
@@ -525,14 +525,14 @@ async function claimResolvedPositions() {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    // Redeem: use public RPC with no API key (Ankr/polygon-rpc.com now require auth).
-    // Optional POLYGON_RPC_URL overrides; otherwise PublicNode (no key required).
-    const publicRpc =
-      (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-bor-rpc.publicnode.com";
+    // Redeem: same RPC as rest of Polymarket (default Tatum). Set TATUM_API_KEY or POLYGON_RPC_API_KEY in .env.
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-mainnet.gateway.tatum.io";
+    const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
+    const transportOptions = apiKey ? { fetchOptions: { headers: { "x-api-key": apiKey } } } : {};
     const wallet = createWalletClient({
       account,
       chain: polygon,
-      transport: http(publicRpc),
+      transport: http(rpc, transportOptions),
     });
     const builderConfig = new BuilderConfig({
       localBuilderCreds: { key, secret, passphrase },
