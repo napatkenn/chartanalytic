@@ -476,7 +476,10 @@ const PARENT_COLLECTION_ID = "0x" + "00".repeat(32);
  */
 async function claimResolvedPositions() {
   try {
-    const funder = getFunderAddress();
+    // Use platform trading wallet (POLYMARKET_FUNDER_ADDRESS) for positions when set; else funder from default key.
+    const funder =
+      (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim().match(/^0x[a-fA-F0-9]{40}$/)?.[0] ||
+      getFunderAddress();
     if (!funder) return;
 
     const url = `${DATA_API}/positions?user=${encodeURIComponent(funder)}&redeemable=true&limit=100`;
@@ -516,7 +519,15 @@ async function claimResolvedPositions() {
       return;
     }
 
-    const privateKey = (process.env.POLYMARKET_PRIVATE_KEY || "").trim();
+    // Use dedicated redeem key when redeeming for a different wallet (e.g. platform trading wallet).
+    const privateKey = (
+      (process.env.POLYMARKET_REDEEM_PRIVATE_KEY || "").trim() ||
+      (process.env.POLYMARKET_PRIVATE_KEY || "").trim()
+    );
+    if (!privateKey || !privateKey.startsWith("0x")) {
+      console.warn("[polymarket] No POLYMARKET_PRIVATE_KEY (or POLYMARKET_REDEEM_PRIVATE_KEY); skipping claim.");
+      return;
+    }
     const { createWalletClient, http } = require("viem");
     const { privateKeyToAccount } = require("viem/accounts");
     const { polygon } = require("viem/chains");
@@ -554,7 +565,10 @@ async function claimResolvedPositions() {
       },
     ];
 
-    for (const conditionId of conditionIds) {
+    const redeemDelayMs = Number(process.env.POLYMARKET_REDEEM_DELAY_MS) || 5000;
+    for (let i = 0; i < conditionIds.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, redeemDelayMs));
+      const conditionId = conditionIds[i];
       try {
         const indexSets = [...(conditionToIndexSets.get(conditionId) || [])].sort((a, b) => a - b);
         if (indexSets.length === 0) continue;
@@ -579,7 +593,15 @@ async function claimResolvedPositions() {
           console.warn("[polymarket] Redeem failed for", conditionId, "(relayer reported failed or timed out)");
         }
       } catch (e) {
-        console.warn("[polymarket] Redeem error for", conditionId, e?.message || e);
+        const status = e?.response?.status ?? e?.status;
+        const errStr = JSON.stringify(e?.data || e?.message || e || "");
+        const is429 = status === 429 || /quota exceeded|429|Too Many Requests/i.test(errStr);
+        if (is429) {
+          const resetSec = (e?.data?.error && String(e.data.error).match(/resets in (\d+) seconds/)?.[1]) || "~900";
+          console.warn("[polymarket] Redeem rate limited (429) for", conditionId, "— Polymarket relayer quota, not RPC. Wait", resetSec, "s or set POLYMARKET_REDEEM_DELAY_MS=10000 to space out redeems.");
+        } else {
+          console.warn("[polymarket] Redeem error for", conditionId, e?.message || e);
+        }
       }
     }
   } catch (e) {
