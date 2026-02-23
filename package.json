@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "social-agent:redeem": "node social-agent/test-polymarket.js --redeem",
     "db:clear-old-uploads": "node scripts/clear-old-upload-urls.js",
     "social-agent": "node social-agent/run.js",
     "social-agent:test-polymarket": "node social-agent/test-polymarket.js",

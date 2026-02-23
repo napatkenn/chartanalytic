@@ -2,6 +2,7 @@
 /**
  * Test Polymarket flow without running Puppeteer or OpenAI.
  * Usage:
+ *   node test-polymarket.js --redeem  Only claim/redeem resolved positions (needs POLYMARKET_* + POLY_BUILDER_*)
  *   node test-polymarket.js           Test market discovery only (no key needed)
  *   node test-polymarket.js --dry     Dry-run placePrediction with fake analysis (no real order)
  *   node test-polymarket.js --live    Real order (needs POLYMARKET_PRIVATE_KEY, uses small size)
@@ -28,7 +29,14 @@ const { getScheduleById } = require("./config");
 
 async function main() {
   const args = process.argv.slice(2);
+  const redeemOnly = args.includes("--redeem");
   const dryRun = args.includes("--dry");
+  if (redeemOnly) {
+    console.log("=== Redeem only: claiming resolved Polymarket positions ===\n");
+    await polymarket.claimResolvedPositions();
+    return;
+  }
+
   const live = args.includes("--live");
 
   console.log("=== 1. Market discovery (15-min preferred, then any crypto) ===\n");

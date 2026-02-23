@@ -4,6 +4,7 @@
  * Usage:
  *   node run.js              Run all schedules due at current UTC hour
  *   node run.js eurusd       Run only EUR/USD schedule
+ *   node run.js --redeem     Only claim/redeem resolved Polymarket positions (no capture or orders)
  *   node run.js --no-analyze Run without AI analysis (post chart only with symbol/tf caption)
  *   node run.js --dry-run    Capture + analyze + format post text; print only, do not post to X
  *   node run.js --predict    Polymarket-only: capture, 15-min up/down analysis, place prediction; no X post
@@ -140,8 +141,15 @@ async function analyzeAndPlaceOrder(schedule, imagePath, options = {}) {
 
 async function main() {
   const args = process.argv.slice(2);
+  const redeemOnly = args.includes("--redeem");
   const skipAnalyze = args.includes("--no-analyze");
   const dryRun = args.includes("--dry-run");
+  if (redeemOnly) {
+    console.log("Redeem-only: claiming resolved Polymarket positions...");
+    await polymarket.claimResolvedPositions();
+    return;
+  }
+
   const doPredict = args.includes("--predict");
   const filtered = args.filter((a) => !a.startsWith("--"));
 

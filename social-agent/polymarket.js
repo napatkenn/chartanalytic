@@ -422,8 +422,8 @@ async function ensureAllowanceGasless(privateKey) {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    // PublicNode often returns 403 for eth_estimateGas; set POLYGON_RPC_URL (e.g. Tatum, Alchemy) or use POLYMARKET_FUNDER_ADDRESS to skip gasless.
-    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-rpc.com";
+    // Default: public RPC (no API key). Set POLYGON_RPC_URL for a dedicated provider if needed.
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://rpc.ankr.com/polygon";
     const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
     const transportOptions = apiKey
       ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
@@ -525,15 +525,14 @@ async function claimResolvedPositions() {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-rpc.com";
-    const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
-    const transportOptions = apiKey
-      ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
-      : {};
+    // Redeem: use public RPC with no API key (Ankr/polygon-rpc.com now require auth).
+    // Optional POLYGON_RPC_URL overrides; otherwise PublicNode (no key required).
+    const publicRpc =
+      (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-bor-rpc.publicnode.com";
     const wallet = createWalletClient({
       account,
       chain: polygon,
-      transport: http(rpc, transportOptions),
+      transport: http(publicRpc),
     });
     const builderConfig = new BuilderConfig({
       localBuilderCreds: { key, secret, passphrase },
@@ -570,9 +569,14 @@ async function claimResolvedPositions() {
         );
         const result = await response.wait();
         if (result) {
-          console.log("[polymarket] Redeemed", conditionId);
+          const txHash = result.transactionHash || response.transactionHash;
+          console.log("[polymarket] Redeemed", conditionId, txHash ? `(tx: ${txHash})` : "");
+          if (txHash) {
+            console.log("[polymarket] Verify on Polygonscan: https://polygonscan.com/tx/" + txHash);
+          }
+          // If USDC didn't increase: redemption credits the proxy wallet; check that address or withdraw from Polymarket.
         } else {
-          console.warn("[polymarket] Redeem failed for", conditionId);
+          console.warn("[polymarket] Redeem failed for", conditionId, "(relayer reported failed or timed out)");
         }
       } catch (e) {
         console.warn("[polymarket] Redeem error for", conditionId, e?.message || e);
