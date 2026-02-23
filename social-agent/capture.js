@@ -233,6 +233,8 @@ async function captureChart(url, outputPath, options = {}) {
         throw e;
       }
     }
+    // Give the OS time to release Chrome profile files before the next capture (avoids EBUSY on next launch)
+    await new Promise((r) => setTimeout(r, 1500));
   }
 }
 

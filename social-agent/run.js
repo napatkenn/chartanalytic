@@ -174,6 +174,7 @@ async function main() {
         if (canRetry) {
           console.warn(`[${schedule.id}] Capture failed (likely rate limit). Waiting ${retryDelayMs / 1000}s before retry (${attempt + 1}/${maxAttempts - 1})...`);
           await new Promise((r) => setTimeout(r, retryDelayMs));
+          console.log(`[${schedule.id}] Retrying capture now...`);
           continue;
         }
         console.error(`[${schedule.id}] Error:`, err.message);
