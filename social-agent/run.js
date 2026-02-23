@@ -155,22 +155,24 @@ async function main() {
   }
 
   // Longer delay between captures in predict mode to avoid TradingView 403 rate-limit on 2nd/3rd/4th chart
-  const delayBetweenCapturesMs = doPredict ? (Number(process.env.CAPTURE_DELAY_MS) || 12000) : 0;
-  const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 15000;
+  const delayBetweenCapturesMs = doPredict ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
+  const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 30000;
+  const maxAttempts = 3;
 
   for (let i = 0; i < schedules.length; i++) {
     if (i > 0 && delayBetweenCapturesMs > 0) {
       await new Promise((r) => setTimeout(r, delayBetweenCapturesMs));
     }
     const schedule = schedules[i];
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         await runOne(schedule, { skipAnalyze, dryRun, doPredict });
         break;
       } catch (err) {
         const is403 = /403|Unexpected server response/i.test(err.message || "");
-        if (attempt === 0 && is403 && delayBetweenCapturesMs > 0) {
-          console.warn(`[${schedule.id}] Capture failed (likely rate limit). Waiting ${retryDelayMs / 1000}s before retry...`);
+        const canRetry = attempt < maxAttempts - 1 && is403 && delayBetweenCapturesMs > 0;
+        if (canRetry) {
+          console.warn(`[${schedule.id}] Capture failed (likely rate limit). Waiting ${retryDelayMs / 1000}s before retry (${attempt + 1}/${maxAttempts - 1})...`);
           await new Promise((r) => setTimeout(r, retryDelayMs));
           continue;
         }

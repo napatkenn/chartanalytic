@@ -122,8 +122,13 @@ async function captureChart(url, outputPath, options = {}) {
     ...launchOpts,
   });
 
+  // Use a new incognito context per capture so each run has a clean session (no shared cookies/storage).
+  // Helps avoid TradingView 403 rate-limit when capturing multiple charts in sequence.
+  const createContext = browser.createBrowserContext ?? browser.createIncognitoBrowserContext;
+  const context = createContext ? await createContext.call(browser) : null;
+  const page = context ? await context.newPage() : await browser.newPage();
+
   try {
-    const page = await browser.newPage();
     await page.setViewport({ width: viewportWidth, height: viewportHeight, deviceScaleFactor: 2 });
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -211,6 +216,11 @@ async function captureChart(url, outputPath, options = {}) {
     console.log("[capture] Saved", outputPath, "(" + Math.round(stat.size / 1024) + " KB)");
     return { path: outputPath, size: stat.size };
   } finally {
+    if (context) {
+      try {
+        await context.close();
+      } catch (_) {}
+    }
     try {
       await browser.close();
     } catch (e) {
