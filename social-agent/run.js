@@ -154,16 +154,13 @@ async function main() {
     }
   }
 
-  // In predict mode with multiple assets: parallel by default locally; on Render default to sequential (4 Chromium instances can OOM/hang)
-  const isRender = process.env.RENDER === "true";
+  // One browser at a time (capture → close → next). Set CAPTURE_PARALLEL=true to run all assets in parallel (heavy on memory).
   const parallel =
     doPredict &&
     schedules.length > 1 &&
-    (isRender
-      ? process.env.CAPTURE_PARALLEL === "true" || process.env.CAPTURE_PARALLEL === "1"
-      : process.env.CAPTURE_PARALLEL !== "false" && process.env.CAPTURE_PARALLEL !== "0");
-  if (doPredict && schedules.length > 1 && isRender && !parallel) {
-    console.log("Render detected: running sequentially (set CAPTURE_PARALLEL=true to override).");
+    (process.env.CAPTURE_PARALLEL === "true" || process.env.CAPTURE_PARALLEL === "1");
+  if (doPredict && schedules.length > 1 && !parallel) {
+    console.log("Running one asset at a time (browser closed after each). Set CAPTURE_PARALLEL=true for parallel.");
   }
   const delayBetweenCapturesMs =
     doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
