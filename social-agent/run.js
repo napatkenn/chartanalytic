@@ -247,6 +247,7 @@ async function main() {
         if (out.value.placed) console.log(`[${schedule.id}] Order ID:`, out.value.orderId);
       }
     });
+    await polymarket.claimResolvedPositions();
     return;
   }
 
@@ -264,6 +265,7 @@ async function main() {
       }
     });
     if (hasFailure) process.exitCode = 1;
+    await polymarket.claimResolvedPositions();
     return;
   }
 
@@ -290,6 +292,10 @@ async function main() {
         break;
       }
     }
+  }
+
+  if (doPredict) {
+    await polymarket.claimResolvedPositions();
   }
 }
 

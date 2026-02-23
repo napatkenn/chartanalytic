@@ -7,6 +7,7 @@
  */
 
 const GAMMA_API = "https://gamma-api.polymarket.com";
+const DATA_API = "https://data-api.polymarket.com";
 const CLOB_HOST = "https://clob.polymarket.com";
 /** GET https://polymarket.com/api/geoblock — used before any CLOB order to check if IP is allowed to trade. */
 const GEOBLOCK_URL = "https://polymarket.com/api/geoblock";
@@ -372,6 +373,34 @@ function analysisToSide(analysis, marketQuestion) {
 }
 
 /**
+ * Get the funder address (wallet that holds positions / USDC.e). Same logic as getClient.
+ * Use POLYMARKET_FUNDER_ADDRESS if set; else derive proxy if Builder creds exist; else EOA from private key.
+ * @returns {string | null} 0x address or null if no key set
+ */
+function getFunderAddress() {
+  const privateKey = (process.env.POLYMARKET_PRIVATE_KEY || "").trim();
+  if (!privateKey || !privateKey.startsWith("0x")) return null;
+  const envFunder = (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim();
+  if (envFunder && envFunder.startsWith("0x") && envFunder.length === 42) return envFunder;
+  const { Wallet } = require("ethers");
+  const signer = new Wallet(privateKey);
+  let funderAddress = signer.address;
+  const hasBuilderCreds =
+    (process.env.POLY_BUILDER_API_KEY || "").trim() &&
+    (process.env.POLY_BUILDER_SECRET || "").trim() &&
+    (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+  if (hasBuilderCreds) {
+    try {
+      const { deriveProxyWallet } = require("@polymarket/builder-relayer-client/dist/builder/derive");
+      const { getContractConfig } = require("@polymarket/builder-relayer-client/dist/config");
+      const proxyFactory = getContractConfig(CHAIN_ID).ProxyContracts.ProxyFactory;
+      funderAddress = deriveProxyWallet(signer.address, proxyFactory);
+    } catch (_) {}
+  }
+  return funderAddress;
+}
+
+/**
  * Run USDC.e approve(CTF) via Polymarket gasless relayer (Builder Program).
  * Requires POLY_BUILDER_API_KEY, POLY_BUILDER_SECRET, POLY_BUILDER_PASSPHRASE.
  * @see https://docs.polymarket.com/trading/gasless
@@ -435,6 +464,105 @@ async function ensureAllowanceGasless(privateKey) {
     return { ok: true };
   } catch (e) {
     return { ok: false, message: e?.message || String(e) };
+  }
+}
+
+/** parentCollectionId for Polymarket binary markets (32 zero bytes). */
+const PARENT_COLLECTION_ID = "0x" + "00".repeat(32);
+
+/**
+ * Fetch redeemable positions from Data API and redeem them gaslessly (no RPC).
+ * Call after predict flow. Skips if no key, no Builder creds, or no redeemable positions.
+ */
+async function claimResolvedPositions() {
+  try {
+    const funder = getFunderAddress();
+    if (!funder) return;
+
+    const url = `${DATA_API}/positions?user=${encodeURIComponent(funder)}&redeemable=true&limit=100`;
+    const res = await pmFetch(url);
+    if (!res.ok) {
+      console.warn("[polymarket] Claim: Data API positions failed", res.status);
+      return;
+    }
+    const positions = await res.json().catch(() => []);
+    if (!Array.isArray(positions) || positions.length === 0) {
+      return;
+    }
+
+    const conditionIds = [...new Set(positions.map((p) => p.conditionId).filter(Boolean))];
+    if (conditionIds.length === 0) return;
+
+    const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
+    const secret = (process.env.POLY_BUILDER_SECRET || "").trim();
+    const passphrase = (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+    if (!key || !secret || !passphrase) {
+      console.warn("[polymarket] Builder credentials not set; skipping claim.");
+      return;
+    }
+
+    const privateKey = (process.env.POLYMARKET_PRIVATE_KEY || "").trim();
+    const { createWalletClient, http } = require("viem");
+    const { privateKeyToAccount } = require("viem/accounts");
+    const { polygon } = require("viem/chains");
+    const { encodeFunctionData } = require("viem");
+    const { RelayClient, RelayerTxType } = require("@polymarket/builder-relayer-client");
+    const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
+
+    const account = privateKeyToAccount(privateKey);
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-rpc.com";
+    const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
+    const transportOptions = apiKey
+      ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
+      : {};
+    const wallet = createWalletClient({
+      account,
+      chain: polygon,
+      transport: http(rpc, transportOptions),
+    });
+    const builderConfig = new BuilderConfig({
+      localBuilderCreds: { key, secret, passphrase },
+    });
+    const client = new RelayClient(RELAYER_URL, CHAIN_ID, wallet, builderConfig, RelayerTxType.PROXY);
+
+    const redeemAbi = [
+      {
+        name: "redeemPositions",
+        type: "function",
+        stateMutability: "nonpayable",
+        inputs: [
+          { name: "collateralToken", type: "address" },
+          { name: "parentCollectionId", type: "bytes32" },
+          { name: "conditionId", type: "bytes32" },
+          { name: "indexSets", type: "uint256[]" },
+        ],
+        outputs: [],
+      },
+    ];
+
+    for (const conditionId of conditionIds) {
+      try {
+        const data = encodeFunctionData({
+          abi: redeemAbi,
+          functionName: "redeemPositions",
+          args: [USDC_E, PARENT_COLLECTION_ID, conditionId, [1, 2]],
+        });
+        const response = await client.execute(
+          [{ to: CTF_SPENDER, data, value: "0" }],
+          "Redeem positions"
+        );
+        const result = await response.wait();
+        if (result) {
+          console.log("[polymarket] Redeemed", conditionId);
+        } else {
+          console.warn("[polymarket] Redeem failed for", conditionId);
+        }
+      } catch (e) {
+        console.warn("[polymarket] Redeem error for", conditionId, e?.message || e);
+      }
+    }
+  } catch (e) {
+    console.warn("[polymarket] Claim resolved failed:", e?.message || e);
   }
 }
 
@@ -706,4 +834,6 @@ module.exports = {
   isConfigured,
   analysisToSide,
   checkGeoblock,
+  getFunderAddress,
+  claimResolvedPositions,
 };
