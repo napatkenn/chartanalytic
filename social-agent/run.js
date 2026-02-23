@@ -113,6 +113,31 @@ async function runOne(schedule, options = {}) {
   return result;
 }
 
+/** Capture only (no analyze, no place). Returns image path. Used for capture-then-place-all flow. */
+async function captureOnly(schedule) {
+  const outPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}.png`);
+  await fs.mkdir(OUT_DIR, { recursive: true });
+  console.log(`[${schedule.id}] Capturing ${schedule.name} ${schedule.timeframe}...`);
+  await captureChart(schedule.url, outPath, { waitMs: 4000, schedule });
+  return outPath;
+}
+
+/** Analyze image and place Polymarket order (no capture). Returns place result or null if not configured. */
+async function analyzeAndPlaceOrder(schedule, imagePath, options = {}) {
+  const { dryRun = false } = options;
+  if (!schedule.polymarketAsset) return null;
+  console.log(`[${schedule.id}] Analyzing (next 15 min up/down)...`);
+  const analysis = await analyzeImage(imagePath, { forPolymarket15m: true });
+  if (!polymarket.isConfigured()) {
+    console.warn(`[${schedule.id}] Polymarket not configured. Skipping order.`);
+    return null;
+  }
+  console.log(`[${schedule.id}] Placing Polymarket prediction...`);
+  const result = await polymarket.placePrediction(schedule, analysis, { dryRun });
+  console.log(`[${schedule.id}] Done (Polymarket bot; no social post).`);
+  return result;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const skipAnalyze = args.includes("--no-analyze");
@@ -166,6 +191,64 @@ async function main() {
     doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
   const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 30000;
   const maxAttempts = 3;
+
+  // Render / CAPTURE_THEN_PLACE_ALL: capture one at a time (one browser), then analyze + place all orders in parallel
+  const useCaptureThenPlaceAll =
+    doPredict &&
+    schedules.length > 1 &&
+    (process.env.RENDER === "true" ||
+      process.env.CAPTURE_THEN_PLACE_ALL === "true" ||
+      process.env.CAPTURE_THEN_PLACE_ALL === "1");
+
+  if (useCaptureThenPlaceAll) {
+    console.log("Phase 1: Capturing one asset at a time (one browser, closed after each)...");
+    const captured = [];
+    for (let i = 0; i < schedules.length; i++) {
+      if (i > 0 && delayBetweenCapturesMs > 0) {
+        await new Promise((r) => setTimeout(r, delayBetweenCapturesMs));
+      }
+      const schedule = schedules[i];
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+          const imagePath = await captureOnly(schedule);
+          captured.push({ schedule, imagePath });
+          break;
+        } catch (err) {
+          const is403 = /403|Unexpected server response/i.test(err.message || "");
+          const canRetry = attempt < maxAttempts - 1 && is403;
+          if (canRetry) {
+            console.warn(`[${schedule.id}] Capture failed (likely rate limit). Waiting ${retryDelayMs / 1000}s before retry (${attempt + 1}/${maxAttempts - 1})...`);
+            await new Promise((r) => setTimeout(r, retryDelayMs));
+            console.log(`[${schedule.id}] Retrying capture now...`);
+            continue;
+          }
+          console.error(`[${schedule.id}] Capture error:`, err.message);
+          process.exitCode = 1;
+          break;
+        }
+      }
+    }
+    if (captured.length === 0) {
+      console.error("No captures succeeded. Exiting.");
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`Phase 2: Analyzing and placing Polymarket orders for ${captured.length} asset(s) (parallel)...`);
+    const placeResults = await Promise.allSettled(
+      captured.map(({ schedule, imagePath }) => analyzeAndPlaceOrder(schedule, imagePath, { dryRun }))
+    );
+    placeResults.forEach((out, i) => {
+      const { schedule } = captured[i];
+      if (out.status === "rejected") {
+        process.exitCode = 1;
+        console.error(`[${schedule.id}] Analyze/place error:`, out.reason?.message || out.reason);
+      } else if (out.value && out.value.message) {
+        console.log(`[${schedule.id}] Polymarket:`, out.value.message);
+        if (out.value.placed) console.log(`[${schedule.id}] Order ID:`, out.value.orderId);
+      }
+    });
+    return;
+  }
 
   if (parallel && schedules.length > 1) {
     console.log("Running all assets in parallel.");
