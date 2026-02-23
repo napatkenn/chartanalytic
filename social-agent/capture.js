@@ -170,8 +170,8 @@ async function captureChart(url, outputPath, options = {}) {
     await new Promise((r) => setTimeout(r, waitMs));
 
     if (process.env.FLY_APP_NAME || process.env.RENDER) {
-      console.log("[capture] Extra 3s for chart to settle...");
-      await new Promise((r) => setTimeout(r, 3000));
+      console.log("[capture] Extra 1s for chart to settle...");
+      await new Promise((r) => setTimeout(r, 1000));
     }
     console.log("[capture] Full screen (Shift+F)...");
     await page.keyboard.down("Shift");
@@ -234,7 +234,7 @@ async function captureChart(url, outputPath, options = {}) {
       }
     }
     // Give the OS time to release Chrome profile files before the next capture (avoids EBUSY on next launch)
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 }
 

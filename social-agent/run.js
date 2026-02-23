@@ -188,7 +188,7 @@ async function main() {
     console.log("Running one asset at a time (browser closed after each). Set CAPTURE_PARALLEL=true for parallel.");
   }
   const delayBetweenCapturesMs =
-    doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
+    doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 1000) : 0;
   const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 30000;
   const maxAttempts = 3;
 
