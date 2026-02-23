@@ -151,8 +151,8 @@ async function captureChart(url, outputPath, options = {}) {
     page.setDefaultNavigationTimeout(navTimeout);
     console.log("[capture] Loading page...");
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: navTimeout });
-    console.log("[capture] Page loaded, waiting for chart (up to 12s)...");
-    const chartWaitMs = Number(process.env.CAPTURE_CHART_WAIT_MS) || 12000;
+    console.log("[capture] Page loaded, waiting for chart (up to 5s)...");
+    const chartWaitMs = Number(process.env.CAPTURE_CHART_WAIT_MS) || 5000;
     const chartEl = await page.waitForSelector('[data-name="chart-container"]', { timeout: chartWaitMs }).catch(() => null);
     if (chartEl) {
       console.log("[capture] Chart container found.");
