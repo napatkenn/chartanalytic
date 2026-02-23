@@ -462,7 +462,8 @@ async function placePrediction(schedule, analysis, options = {}) {
   const dryRun = options.dryRun === true;
   const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 65;
   const MIN_ORDER_USD = 5; // Polymarket CLOB minimum (e.g. $5 for marketable BUY)
-  const maxSizeUsd = Math.max(MIN_ORDER_USD, Number(process.env.POLYMARKET_MAX_SIZE_USD) || MIN_ORDER_USD);
+  const MAX_ORDER_USD = 10;
+  const maxSizeUsd = Math.max(MIN_ORDER_USD, Math.min(MAX_ORDER_USD, Number(process.env.POLYMARKET_MAX_SIZE_USD) || MAX_ORDER_USD));
 
   const assetKey = schedule.polymarketAsset;
   if (!assetKey) {
@@ -559,7 +560,7 @@ async function placePrediction(schedule, analysis, options = {}) {
     const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
     const negRisk = Boolean(marketInfo?.neg_risk);
 
-    const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, 100));
+    const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, MAX_ORDER_USD));
     const sizeForOrder = Number(size) >= MIN_ORDER_USD ? Number(size) : MIN_ORDER_USD;
 
     function isOrderbookExpiredError(errOrResp) {
