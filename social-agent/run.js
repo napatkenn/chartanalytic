@@ -154,12 +154,17 @@ async function main() {
     }
   }
 
-  // In predict mode with multiple assets, run in parallel unless CAPTURE_PARALLEL=false
+  // In predict mode with multiple assets: parallel by default locally; on Render default to sequential (4 Chromium instances can OOM/hang)
+  const isRender = process.env.RENDER === "true";
   const parallel =
     doPredict &&
     schedules.length > 1 &&
-    process.env.CAPTURE_PARALLEL !== "false" &&
-    process.env.CAPTURE_PARALLEL !== "0";
+    (isRender
+      ? process.env.CAPTURE_PARALLEL === "true" || process.env.CAPTURE_PARALLEL === "1"
+      : process.env.CAPTURE_PARALLEL !== "false" && process.env.CAPTURE_PARALLEL !== "0");
+  if (doPredict && schedules.length > 1 && isRender && !parallel) {
+    console.log("Render detected: running sequentially (set CAPTURE_PARALLEL=true to override).");
+  }
   const delayBetweenCapturesMs =
     doPredict && !parallel ? (Number(process.env.CAPTURE_DELAY_MS) || 25000) : 0;
   const retryDelayMs = Number(process.env.CAPTURE_RETRY_DELAY_MS) || 30000;
