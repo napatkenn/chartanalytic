@@ -48,7 +48,7 @@ async function runOne(schedule, options = {}) {
 
   console.log(`[${schedule.id}] Capturing ${schedule.name} ${schedule.timeframe}...`);
   await fs.mkdir(OUT_DIR, { recursive: true });
-  await captureChart(schedule.url, outPath, { waitMs: 4000, schedule });
+  await captureChart(schedule.url, outPath, { waitMs: 1000, schedule });
 
   let caption;
   let imagePathForPost = outPath;
@@ -118,7 +118,7 @@ async function captureOnly(schedule) {
   const outPath = path.join(OUT_DIR, `${schedule.id}-${Date.now()}.png`);
   await fs.mkdir(OUT_DIR, { recursive: true });
   console.log(`[${schedule.id}] Capturing ${schedule.name} ${schedule.timeframe}...`);
-  await captureChart(schedule.url, outPath, { waitMs: 4000, schedule });
+  await captureChart(schedule.url, outPath, { waitMs: 1000, schedule });
   return outPath;
 }
 

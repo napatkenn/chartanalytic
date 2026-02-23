@@ -151,8 +151,8 @@ async function captureChart(url, outputPath, options = {}) {
     page.setDefaultNavigationTimeout(navTimeout);
     console.log("[capture] Loading page...");
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: navTimeout });
-    console.log("[capture] Page loaded, waiting for chart (up to 5s)...");
-    const chartWaitMs = Number(process.env.CAPTURE_CHART_WAIT_MS) || 5000;
+    console.log("[capture] Page loaded, waiting for chart (up to 3s)...");
+    const chartWaitMs = Number(process.env.CAPTURE_CHART_WAIT_MS) || 3000;
     const chartEl = await page.waitForSelector('[data-name="chart-container"]', { timeout: chartWaitMs }).catch(() => null);
     if (chartEl) {
       console.log("[capture] Chart container found.");
@@ -161,7 +161,7 @@ async function captureChart(url, outputPath, options = {}) {
     }
 
     if (schedule && schedule.timeframe) {
-      const tfTimeout = 8000;
+      const tfTimeout = 4000;
       const detected = await waitForTimeframe(page, schedule.timeframe, tfTimeout);
       if (!detected) {
         console.warn("[capture] Timeframe not detected in toolbar; capturing anyway.");
@@ -170,14 +170,14 @@ async function captureChart(url, outputPath, options = {}) {
     await new Promise((r) => setTimeout(r, waitMs));
 
     if (process.env.FLY_APP_NAME || process.env.RENDER) {
-      console.log("[capture] Extra 1s for chart to settle...");
-      await new Promise((r) => setTimeout(r, 1000));
+      console.log("[capture] Extra 0.5s for chart to settle...");
+      await new Promise((r) => setTimeout(r, 500));
     }
     console.log("[capture] Full screen (Shift+F)...");
     await page.keyboard.down("Shift");
     await page.keyboard.press("f");
     await page.keyboard.up("Shift");
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 300));
 
     if (chartEl) {
       const box = await chartEl.boundingBox();
