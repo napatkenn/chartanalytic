@@ -19,11 +19,11 @@ services:
       - key: NEXTAUTH_URL
         sync: false
 
-  # Polymarket runs in Render's region (e.g. Oregon = US). Polymarket blocks US — set PROXY_URL to an HTTP proxy in an allowed region (e.g. EU).
+  # Polymarket cron: run 2 min before each 15m window (58, 13, 28, 43) so capture+analyze+place finish by :00, :15, :30, :45.
   - type: cron
     name: polymarket-cron
     runtime: node
-    schedule: "0,15,30,45 * * * *"
+    schedule: "58,13,28,43 * * * *"
     buildCommand: npm ci
     startCommand: node social-agent/run.js --predict
     envVars:

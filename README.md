@@ -119,7 +119,7 @@ The app and scheduled jobs run on **Render** using the Blueprint in `render.yaml
    The web service uses the same filesystem for the request lifecycle. If you need persistent uploads across restarts, use Vercel Blob (set `BLOB_READ_WRITE_TOKEN`) or another storage and configure the app accordingly.
 
 **Scheduled jobs (social agent)**  
-- **Polymarket cron**: runs at :00, :15, :30, :45 UTC (`node social-agent/run.js --predict`).  
+- **Polymarket cron**: runs at :58, :13, :28, :43 UTC (2 min before each 15m window so jobs finish by :00, :15, :30, :45) (`node social-agent/run.js --predict`).  
 - **Social cron**: runs at 07:00, 12:00, 15:00, 17:00, 20:00 UTC (`node social-agent/run.js`).  
 
 See [social-agent/README.md](./social-agent/README.md) for env vars and usage.
