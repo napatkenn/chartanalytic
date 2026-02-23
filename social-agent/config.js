@@ -120,7 +120,7 @@ function getSchedulesForHour(utcHour) {
   return SCHEDULES.filter((s) => !s.every15Min && s.postTimeUTC === utcHour);
 }
 
-/** Schedules that run every 15 min (crypto / Polymarket). Cron runs at :58, :13, :28, :43 (2 min early); slot check uses :00, :15, :30, :45. */
+/** Schedules that run every 15 min (crypto / Polymarket). Due when minute is 0, 15, 30, or 45. */
 function getSchedulesFor15MinSlot(utcHour, utcMinute) {
   const slotMinutes = [0, 15, 30, 45];
   if (!slotMinutes.includes(utcMinute)) return [];

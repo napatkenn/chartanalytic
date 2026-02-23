@@ -19,11 +19,11 @@ services:
       - key: NEXTAUTH_URL
         sync: false
 
-  # Polymarket cron: run 2 min before each 15m window (58, 13, 28, 43) so capture+analyze+place finish by :00, :15, :30, :45.
+  # Polymarket cron: run 4 min before each 15m window (56, 11, 26, 41) so capture+analyze+place finish by :00, :15, :30, :45.
   - type: cron
     name: polymarket-cron
     runtime: node
-    schedule: "58,13,28,43 * * * *"
+    schedule: "56,11,26,41 * * * *"
     buildCommand: npm ci
     startCommand: node social-agent/run.js --predict
     envVars:
