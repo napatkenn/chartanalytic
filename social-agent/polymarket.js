@@ -360,7 +360,8 @@ async function getClient() {
 
 /**
  * Map chart analysis to Polymarket side and token.
- * - Bullish → Buy YES (first token). Bearish → Buy NO (second token). Range → skip.
+ * We place the opposite of the AI: AI says up (bullish) → buy down (NO). AI says down (bearish) → buy up (YES).
+ * - Bullish → Buy NO (second token). Bearish → Buy YES (first token). Range → skip.
  * - Optionally invert if market question is phrased as "below X" (then bearish = Yes).
  */
 function analysisToSide(analysis, marketQuestion) {
@@ -370,8 +371,9 @@ function analysisToSide(analysis, marketQuestion) {
   const q = (marketQuestion || "").toLowerCase();
   const isInverted = q.includes("below") || q.includes("under") || q.includes("drop");
 
-  if (bias === "bullish") return { side: isInverted ? "NO" : "YES", tokenIndex: isInverted ? 1 : 0 };
-  if (bias === "bearish") return { side: isInverted ? "YES" : "NO", tokenIndex: isInverted ? 0 : 1 };
+  // Opposite of AI: bullish (AI says up) → we buy down (NO); bearish (AI says down) → we buy up (YES)
+  if (bias === "bullish") return { side: isInverted ? "YES" : "NO", tokenIndex: isInverted ? 0 : 1 };
+  if (bias === "bearish") return { side: isInverted ? "NO" : "YES", tokenIndex: isInverted ? 1 : 0 };
   return null;
 }
 
