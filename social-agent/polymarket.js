@@ -2,7 +2,7 @@
  * Polymarket prediction integration: find crypto markets via Gamma API and place
  * orders via CLOB using chart analysis (marketBias + confidence).
  * Requires: POLYMARKET_PRIVATE_KEY (wallet with USDC.e on Polygon), optional
- * POLYMARKET_MIN_CONFIDENCE, POLYMARKET_MAX_SIZE_USD, POLYMARKET_MARKET_SLUGS.
+ * POLYMARKET_MIN_CONFIDENCE, POLYMARKET_MAX_SIZE_USD.
  * Proxy (PROXY_URL) is used only for Polymarket API calls in this file, not for capture/OpenAI.
  */
 
@@ -79,14 +79,6 @@ const ASSET_SEARCH_QUERIES = {
   xrp: "XRP",
 };
 
-/** Default slugs for "Up or Down - 15 min" (event slugs from polymarket.com/event/...). */
-const ASSET_15M_SLUGS = {
-  btc: "btc-updown-15m-1771670700",
-  eth: "eth-updown-15m-1771670700",
-  sol: "sol-updown-15m-1771670700",
-  xrp: "xrp-updown-15m-1771670700",
-};
-
 /** Polymarket 15-minute up/down slug prefixes for event listing (e.g. btc-updown-15m-1765788300). */
 const ASSET_15M_SLUG_PREFIXES = {
   btc: "btc-updown-15m",
@@ -99,12 +91,14 @@ function marketFromEventMarket(event, m) {
   const ids = m.clobTokenIds || m.clob_token_ids;
   const conditionId = m.conditionId || m.condition_id;
   if (!ids || ids.length < 2 || !conditionId) return null;
+  // Prefer full ISO datetime (endDate) for window checks; endDateIso can be date-only and wrong for UTC midnight
+  const endDateIso = m.endDate || m.end_date || event.endDate || event.end_date || m.endDateIso || m.end_date_iso || event.endDateIso || event.end_date_iso;
   return {
     conditionId,
     question: m.question || event.title || "",
     clobTokenIds: parseClobTokenIds(ids),
     slug: event.slug || m.slug,
-    endDateIso: m.endDateIso || m.end_date_iso || event.endDateIso || event.end_date_iso,
+    endDateIso,
   };
 }
 
@@ -121,71 +115,45 @@ function parseClobTokenIds(ids) {
   return ids ? [ids] : [];
 }
 
-/**
- * Fetch a single market by slug (Gamma API: GET /markets/slug/{slug}).
- * @see https://docs.polymarket.com/api-reference/markets/get-market-by-slug
- * @param {string} slug - Market slug (e.g. btc-updown-15m-1771670700)
- * @returns {Promise<{ conditionId: string, question: string, clobTokenIds: string[], slug: string } | null>}
- */
-async function fetchMarketBySlug(slug) {
-  if (!slug || !slug.trim()) return null;
-  const res = await pmFetch(
-    `${GAMMA_API}/markets/slug/${encodeURIComponent(slug.trim())}`
-  );
-  if (!res.ok) return null;
-  const m = await res.json();
-  const conditionId = m.conditionId || m.condition_id;
-  const ids = m.clobTokenIds || m.clob_token_ids;
-  if (!conditionId || !ids) return null;
-  const tokenIds = parseClobTokenIds(ids);
-  if (tokenIds.length < 2) return null;
-  const active = m.active !== false && m.closed !== true;
-  if (!active) return null;
-  return {
-    conditionId,
-    question: m.question || m.title || "",
-    clobTokenIds: tokenIds,
-    slug: m.slug || slug,
-    endDateIso: m.endDateIso || m.end_date_iso,
-  };
-}
+/** Cached tag IDs for "crypto" and "15 Min" (from Gamma GET /tags). */
+let cachedTagIds = null;
+/** Known Gamma tag ID for 15-minute up/down markets (slug "15M"); used if /tags doesn't return it. */
+const TAG_ID_15M = "102467";
 
 /**
- * Fetch event by slug and return first active market (for event URLs like polymarket.com/event/btc-updown-15m-1771670700).
- * Gamma API: GET /events?slug=... or /events/slug/...
+ * Resolve Gamma tag IDs for "crypto" and "15 Min" per https://docs.polymarket.com/market-data/fetching-markets
+ * @returns {Promise<{ cryptoTagId: string | null, fifteenMinTagId: string | null }>}
  */
-async function fetchEventBySlug(slug) {
-  if (!slug || !slug.trim()) return null;
-  const slugEnc = encodeURIComponent(slug.trim());
-  const res = await pmFetch(`${GAMMA_API}/events?slug=${slugEnc}&limit=1`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  const list = Array.isArray(data) ? data : data.events || (data ? [data] : []);
-  const event = list[0];
-  if (!event || !event.markets || event.markets.length === 0) return null;
-  for (const m of event.markets) {
-    const out = marketFromEventMarket(event, m);
-    if (out) return out;
-  }
-  return null;
-}
-
-/** Parse POLYMARKET_MARKET_SLUGS env (e.g. "btc:btc-updown-15m,eth:eth-updown-15m" or "slug1,slug2" in btc,eth,sol,xrp order). */
-function getSlugOverride(assetKey) {
-  const raw = process.env.POLYMARKET_MARKET_SLUGS;
-  if (!raw || !raw.trim()) return null;
-  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  const order = ["btc", "eth", "sol", "xrp"];
-  for (const p of parts) {
-    if (p.includes(":")) {
-      const [key, slug] = p.split(":").map((s) => s.trim());
-      if (key === assetKey && slug) return slug;
+async function getMarketTagIds() {
+  if (cachedTagIds) return cachedTagIds;
+  try {
+    const res = await pmFetch(`${GAMMA_API}/tags`);
+    if (!res.ok) return (cachedTagIds = { cryptoTagId: null, fifteenMinTagId: null });
+    const tags = await res.json();
+    if (!Array.isArray(tags)) return (cachedTagIds = { cryptoTagId: null, fifteenMinTagId: null });
+    let cryptoTagId = null;
+    let fifteenMinTagId = null;
+    const lower = (s) => (s == null ? "" : String(s).toLowerCase());
+    for (const t of tags) {
+      const label = lower(t.label);
+      const slug = lower(t.slug || "");
+      if (!cryptoTagId && (label.includes("crypto") || slug === "crypto" || slug === "cryptocurrency")) {
+        cryptoTagId = String(t.id);
+      }
+      // 15M tag (slug "15M" / "15m") returns only 15-minute up/down markets; preferred over "crypto" for 15m
+      if (!fifteenMinTagId && (slug === "15m" || label === "15m" || label.includes("15 min") || slug.includes("15-min") || label.includes("15 minute"))) {
+        fifteenMinTagId = String(t.id);
+      }
+      if (cryptoTagId && fifteenMinTagId) break;
     }
+    if (!fifteenMinTagId) fifteenMinTagId = TAG_ID_15M;
+    cachedTagIds = { cryptoTagId, fifteenMinTagId };
+    return cachedTagIds;
+  } catch {
+    return (cachedTagIds = { cryptoTagId: null, fifteenMinTagId: TAG_ID_15M });
   }
-  const idx = order.indexOf(assetKey);
-  if (idx >= 0 && parts[idx]) return parts[idx];
-  return null;
 }
+
 
 /** Return true if market end time is in the future (still open for trading). */
 function isMarketEndInFuture(market) {
@@ -195,26 +163,41 @@ function isMarketEndInFuture(market) {
 }
 
 /**
- * Find an active 15-minute up/down market for the asset (preferred for our 15-min bot).
- * Prefers current/next 15m window (from event listing) so we don't use expired slugs.
- * 1) Event listing: active 15m events for this asset, pick market with nearest future end time.
- * 2) Optional POLYMARKET_MARKET_SLUGS: if set, try that slug first (for manual override).
- * 3) Fallback: try default ASSET_15M_SLUGS only if end time is still in the future.
+ * Find an active 15-minute up/down market for the asset (tag-based only).
+ * Uses Gamma GET /events with tag_id for "crypto" and/or "15 Min", then filters by 15m + asset prefix.
+ * @param {string} assetKey - btc | eth | sol | xrp
+ * @param {{ excludeConditionId?: string }} options - If set, skip market with this conditionId (e.g. after orderbook expired).
  */
-async function findCryptoMarket15Min(assetKey) {
+async function findCryptoMarket15Min(assetKey, options = {}) {
   const prefix = ASSET_15M_SLUG_PREFIXES[assetKey];
   if (!prefix) return null;
+  const excludeConditionId = (options.excludeConditionId || "").trim().toLowerCase();
 
   const now = Date.now();
   let best = null;
   let bestEnd = Infinity;
 
-  // 1) Prefer event listing so we get the current/next window (orderbook still open)
-  const res = await pmFetch(
-    `${GAMMA_API}/events?active=true&closed=false&limit=100`
-  );
-  if (res.ok) {
-    const events = await res.json();
+  function consider(out) {
+    if (!out || (excludeConditionId && (out.conditionId || "").toLowerCase() === excludeConditionId)) return;
+    const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
+    if (endMs > now && endMs < bestEnd) {
+      bestEnd = endMs;
+      best = out;
+    }
+  }
+
+  // Use 15M tag (102467) to get only 15-minute up/down markets; fallback to unfiltered if needed
+  const { fifteenMinTagId } = await getMarketTagIds();
+  const eventListUrls = [
+    ...(fifteenMinTagId ? [`${GAMMA_API}/events?tag_id=${fifteenMinTagId}&limit=100&active=true&closed=false`] : []),
+    `${GAMMA_API}/events?active=true&closed=false&limit=100`,
+  ];
+  for (const url of eventListUrls) {
+    const res = await pmFetch(url);
+    if (!res.ok) continue;
+    const data = await res.json();
+    const events = Array.isArray(data) ? data : (data?.value ?? data?.events ?? data?.data ?? []);
+    if (!events.length) continue;
     for (const event of events) {
       const slug = (event.slug || "").toLowerCase();
       if (!slug.includes("15m") || !slug.includes("updown")) continue;
@@ -222,60 +205,9 @@ async function findCryptoMarket15Min(assetKey) {
       const markets = event.markets || [];
       for (const m of markets) {
         const out = marketFromEventMarket(event, m);
-        if (!out) continue;
-        const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
-        if (endMs > now && endMs < bestEnd) {
-          bestEnd = endMs;
-          best = out;
-        }
+        if (out) consider(out);
       }
-      if (best) break;
-    }
-  }
-
-  if (best) return best;
-
-  // 2) POLYMARKET_MARKET_SLUGS override (manual slug for current window)
-  const slugOverride = getSlugOverride(assetKey);
-  if (slugOverride) {
-    const bySlug = await fetchMarketBySlug(slugOverride);
-    if (bySlug && isMarketEndInFuture(bySlug)) return bySlug;
-    const byEvent = await fetchEventBySlug(slugOverride);
-    if (byEvent && isMarketEndInFuture(byEvent)) return byEvent;
-  }
-
-  // 3) Default slug only if its market end is still in the future
-  const slugToTry = ASSET_15M_SLUGS[assetKey];
-  if (slugToTry) {
-    const bySlug = await fetchMarketBySlug(slugToTry);
-    if (bySlug && isMarketEndInFuture(bySlug)) return bySlug;
-    const byEvent = await fetchEventBySlug(slugToTry);
-    if (byEvent && isMarketEndInFuture(byEvent)) return byEvent;
-  }
-
-  // 4) Public search for "Bitcoin 15 minute" etc.
-  const q = `${ASSET_SEARCH_QUERIES[assetKey] || assetKey} 15 minute`;
-  const searchRes = await pmFetch(
-    `${GAMMA_API}/public-search?q=${encodeURIComponent(q)}&events_status=open&limit_per_type=10`
-  );
-  if (searchRes.ok) {
-    const data = await searchRes.json();
-    const searchEvents = data.events || [];
-    for (const event of searchEvents) {
-      const slug = (event.slug || "").toLowerCase();
-      const title = (event.title || "").toLowerCase();
-      if (!slug.includes("15m") && !title.includes("15 min")) continue;
-      const markets = event.markets || [];
-      for (const m of markets) {
-        const out = marketFromEventMarket(event, m);
-        if (!out) continue;
-        const endMs = out.endDateIso ? new Date(out.endDateIso).getTime() : 0;
-        if (endMs > now && endMs < bestEnd) {
-          bestEnd = endMs;
-          best = out;
-        }
-      }
-      if (best) break;
+      if (best) return best;
     }
   }
   return best;
@@ -283,12 +215,13 @@ async function findCryptoMarket15Min(assetKey) {
 
 /**
  * Search Polymarket for active crypto markets. Prefers 15-minute up/down markets when available.
- * @param {string} assetKey - 'btc' | 'eth' | 'sol'
+ * @param {string} assetKey - 'btc' | 'eth' | 'sol' | 'xrp'
+ * @param {{ excludeConditionId?: string }} options - If set, skip market with this conditionId (e.g. orderbook expired).
  * @returns {Promise<{ conditionId: string, question: string, clobTokenIds: string[], slug?: string } | null>}
  */
-async function findCryptoMarket(assetKey) {
+async function findCryptoMarket(assetKey, options = {}) {
   // 1) Prefer 15-minute markets (align with our 15-min analysis schedule)
-  const market15m = await findCryptoMarket15Min(assetKey);
+  const market15m = await findCryptoMarket15Min(assetKey, options);
   if (market15m) return market15m;
 
   // 2) Fallback: any active crypto market (daily/monthly etc.)
@@ -464,7 +397,8 @@ async function ensureAllowanceGasless(privateKey) {
     const { BuilderConfig } = require("@polymarket/builder-signing-sdk");
 
     const account = privateKeyToAccount(privateKey);
-    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-bor-rpc.publicnode.com";
+    // PublicNode often returns 403 for eth_estimateGas; set POLYGON_RPC_URL (e.g. Tatum, Alchemy) or use POLYMARKET_FUNDER_ADDRESS to skip gasless.
+    const rpc = (process.env.POLYGON_RPC_URL || "").trim() || "https://polygon-rpc.com";
     const apiKey = (process.env.POLYGON_RPC_API_KEY || process.env.TATUM_API_KEY || "").trim();
     const transportOptions = apiKey
       ? { fetchOptions: { headers: { "x-api-key": apiKey } } }
@@ -527,7 +461,8 @@ function withTimeout(promise, ms, message) {
 async function placePrediction(schedule, analysis, options = {}) {
   const dryRun = options.dryRun === true;
   const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 65;
-  const maxSizeUsd = Math.max(1, Number(process.env.POLYMARKET_MAX_SIZE_USD) || 1);
+  const MIN_ORDER_USD = 5; // Polymarket CLOB minimum (e.g. $5 for marketable BUY)
+  const maxSizeUsd = Math.max(MIN_ORDER_USD, Number(process.env.POLYMARKET_MAX_SIZE_USD) || MIN_ORDER_USD);
 
   const assetKey = schedule.polymarketAsset;
   if (!assetKey) {
@@ -544,12 +479,13 @@ async function placePrediction(schedule, analysis, options = {}) {
     return { placed: false, message: "Market bias is range; no prediction." };
   }
 
-  const market = await withFetchRetry(() => findCryptoMarket(assetKey), { retries: 2, delayMs: 2000 });
+  // Only 15m up/down markets (no fallback to daily/other crypto markets)
+  let market = await withFetchRetry(() => findCryptoMarket15Min(assetKey), { retries: 2, delayMs: 2000 });
   if (!market) {
-    return { placed: false, message: `No active Polymarket found for ${assetKey}.` };
+    return { placed: false, message: `No active 15m up/down Polymarket found for ${assetKey}.` };
   }
 
-  const tokenId = market.clobTokenIds[sideInfo.tokenIndex];
+  let tokenId = market.clobTokenIds[sideInfo.tokenIndex];
   if (!tokenId) {
     return { placed: false, message: "Missing token ID for chosen side." };
   }
@@ -624,68 +560,121 @@ async function placePrediction(schedule, analysis, options = {}) {
     const negRisk = Boolean(marketInfo?.neg_risk);
 
     const price = 0.5; // Mid price; adjust if you want to limit at better odds
-    const MIN_ORDER_USD = 1; // Polymarket CLOB minimum for marketable BUY
     const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, 100));
-    const sizeForOrder = Number(size) >= 1 ? Number(size) : 1;
+    const sizeForOrder = Number(size) >= MIN_ORDER_USD ? Number(size) : MIN_ORDER_USD;
 
-    try {
-      const response = await client.createAndPostOrder(
-        {
-          tokenID: tokenId,
-          price,
-          size: sizeForOrder,
-          side: Side.BUY, // We choose Yes or No by tokenId (first or second token)
-        },
-        { tickSize, negRisk },
-        OrderType.GTC
-      );
+    function isOrderbookExpiredError(errOrResp) {
+      const apiError = typeof (errOrResp?.response?.data?.error ?? errOrResp?.data?.error) === "string"
+        ? (errOrResp.response?.data?.error ?? errOrResp.data?.error) : (errOrResp?.message || "");
+      const errStr = (apiError || "").toLowerCase();
+      return errStr.includes("orderbook") && (errStr.includes("does not exist") || errStr.includes("doesn't exist"));
+    }
 
-      const orderId = response?.orderID ?? response?.orderId;
-      if (!orderId) {
-        const apiErr = response?.data?.error ?? response?.error ?? "";
-        const errStr = typeof apiErr === "string" ? apiErr : "";
-        if (errStr.toLowerCase().includes("balance") || errStr.toLowerCase().includes("allowance")) {
-          const gaslessTip = hasBuilderCreds
-            ? " With gasless, the CLOB uses your proxy wallet as funder — deposit USDC.e on polymarket.com (so the proxy has balance) then retry."
-            : " Approve USDC.e once on polymarket.com or use gasless relayer.";
-          return { placed: false, message: `Not enough USDC.e balance or allowance.${gaslessTip}` };
+    let currentMarket = market;
+    let currentTokenId = tokenId;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        currentMarket = await findCryptoMarket15Min(assetKey, { excludeConditionId: market.conditionId });
+        if (!currentMarket) {
+          return { placed: false, message: `Market window closed (orderbook expired). No other current 15m window found for ${assetKey}.` };
         }
-        if (errStr) return { placed: false, message: `Order rejected: ${errStr}.` };
-        return {
-          placed: false,
-          message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
-        };
+        currentTokenId = currentMarket.clobTokenIds[sideInfo.tokenIndex];
+        if (!currentTokenId) return { placed: false, message: "Missing token ID for chosen side." };
+        console.log("[polymarket] Retrying with current 15m window:", currentMarket.question || currentMarket.conditionId);
       }
 
-      return {
-        placed: true,
-        orderId,
-        message: `Placed ${sideInfo.side} $${size} on "${market.question}" (order ${orderId}).`,
-      };
-    } catch (err) {
-      const status = err.response?.status ?? err.status;
-      const body = err.response?.data ?? err.data;
-      const apiError = typeof body?.error === "string" ? body.error : err.message;
-      if (status === 403 || (apiError && apiError.toLowerCase().includes("restricted"))) {
-        return {
-          placed: false,
-          message: `Trading restricted in your region (geoblock). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
-        };
+      let marketInfo;
+      try {
+        marketInfo = await client.getMarket(currentMarket.conditionId);
+      } catch (e) {
+        if (attempt === 0 && isOrderbookExpiredError(e)) continue;
+        return { placed: false, message: `getMarket failed: ${e.message}.` };
       }
+
+      const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
+      const negRisk = Boolean(marketInfo?.neg_risk);
+
+      try {
+        const response = await client.createAndPostOrder(
+          {
+            tokenID: currentTokenId,
+            price,
+            size: sizeForOrder,
+            side: Side.BUY,
+          },
+          { tickSize, negRisk },
+          OrderType.GTC
+        );
+
+        const orderId = response?.orderID ?? response?.orderId;
+        if (!orderId) {
+          const apiErr = response?.data?.error ?? response?.error ?? "";
+          const errStr = typeof apiErr === "string" ? apiErr : "";
+          const errLower = errStr.toLowerCase();
+          if (errLower.includes("balance") || errLower.includes("allowance")) {
+            const gaslessTip = hasBuilderCreds
+              ? " With gasless, the CLOB uses your proxy wallet as funder — deposit USDC.e on polymarket.com (so the proxy has balance) then retry."
+              : " Approve USDC.e once on polymarket.com or use gasless relayer.";
+            return { placed: false, message: `Not enough USDC.e balance or allowance.${gaslessTip}` };
+          }
+          if (errLower.includes("orderbook") && (errLower.includes("does not exist") || errLower.includes("doesn't exist"))) {
+            if (attempt === 0) continue;
+            return { placed: false, message: `Market window closed (orderbook expired). No other current 15m window found.` };
+          }
+          if (errStr) return { placed: false, message: `Order rejected: ${errStr}.` };
+          return {
+            placed: false,
+            message: `Order rejected (no order ID returned). Possible geoblock or API error — run from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+          };
+        }
+
+        return {
+          placed: true,
+          orderId,
+          message: `Placed ${sideInfo.side} $${size} on "${currentMarket.question}" (order ${orderId}).`,
+        };
+      } catch (err) {
+        const status = err.response?.status ?? err.status;
+        const body = err.response?.data ?? err.data;
+        const apiError = typeof body?.error === "string" ? body.error : err.message;
+        if (status === 403 || (apiError && apiError.toLowerCase().includes("restricted"))) {
+          return {
+            placed: false,
+            message: `Trading restricted in your region (geoblock). Run the bot from a non-blocked region. See https://docs.polymarket.com/developers/CLOB/geoblock`,
+          };
+        }
+        if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
+          return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
+        }
+        const errText = (apiError || err.message || "").toLowerCase();
+        if (status === 400 && errText.includes("orderbook") && (errText.includes("does not exist") || errText.includes("doesn't exist"))) {
       if (status === 400 && (apiError || "").toLowerCase().includes("api key")) {
         return { placed: false, message: `Could not create API key. Check POLYMARKET_PRIVATE_KEY (Ethereum 0x... wallet).` };
       }
-      if (status === 400 && (apiError || "").toLowerCase().includes("orderbook") && (apiError || "").toLowerCase().includes("does not exist")) {
-        return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window.` };
+      const errText = (apiError || err.message || "").toLowerCase();
+      if (status === 400 && errText.includes("orderbook") && (errText.includes("does not exist") || errText.includes("doesn't exist"))) {
+        return { placed: false, message: `Market window closed (orderbook expired). Next run will use current 15m window from tag-filtered events.` };
       }
       if (status === 400 && (apiError || "").toLowerCase().includes("min size")) {
-        return { placed: false, message: `Order size below Polymarket minimum ($1): ${apiError || err.message}.` };
+        return { placed: false, message: `Order size below Polymarket minimum ($${MIN_ORDER_USD}): ${apiError || err.message}.` };
       }
       if (status === 400 && ((apiError || "").toLowerCase().includes("balance") || (apiError || "").toLowerCase().includes("allowance"))) {
         return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
       }
       return { placed: false, message: `Order failed: ${apiError || err.message}.` };
+          if (attempt === 0) continue;
+          return { placed: false, message: `Market window closed (orderbook expired). No other current 15m window found.` };
+        }
+        if (status === 400 && (apiError || "").toLowerCase().includes("min size")) {
+          return { placed: false, message: `Order size below Polymarket minimum ($${MIN_ORDER_USD}): ${apiError || err.message}.` };
+        }
+        if (status === 400 && ((apiError || "").toLowerCase().includes("balance") || (apiError || "").toLowerCase().includes("allowance"))) {
+          return { placed: false, message: `Not enough USDC balance or allowance. Approve USDC.e once on polymarket.com (trade once) or use gasless relayer: https://docs.polymarket.com/trading/gasless` };
+        }
+        return { placed: false, message: `Order failed: ${apiError || err.message}.` };
+      }
     }
+    return { placed: false, message: `Market window closed (orderbook expired). No other current 15m window found for ${assetKey}.` };
   } finally {
     if (proxyAgent && prevDispatcher !== undefined) {
       try {
@@ -704,8 +693,6 @@ function isConfigured() {
 module.exports = {
   findCryptoMarket,
   findCryptoMarket15Min,
-  fetchMarketBySlug,
-  fetchEventBySlug,
   getClient,
   placePrediction,
   isConfigured,

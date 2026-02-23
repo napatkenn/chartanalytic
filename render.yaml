@@ -37,7 +37,7 @@ services:
       - key: POLYMARKET_FUNDER_ADDRESS
         sync: false
       - key: POLYMARKET_MAX_SIZE_USD
-        value: "1"
+        value: "5"
       - key: POLYMARKET_MIN_CONFIDENCE
         value: "65"
       - key: POLYMARKET_API_KEY
