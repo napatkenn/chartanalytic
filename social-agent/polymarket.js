@@ -677,7 +677,11 @@ async function placePrediction(schedule, analysis, options = {}) {
 
   // Order size scales with confidence: $1 per 2% above min (60% -> $10, 62% -> $11, ..., 80%+ -> $20)
   const steps = Math.max(0, Math.floor((confidence - minConfidence) / 2));
-  const sizeUsdClamped = Math.max(MIN_ORDER_USD, Math.min(capMax, MIN_ORDER_USD + steps));
+  const sizeByConfidence = MIN_ORDER_USD + steps;
+  const sizeUsdClamped = Math.max(MIN_ORDER_USD, Math.min(capMax, sizeByConfidence));
+  if (capMax < MAX_ORDER_USD && sizeByConfidence > capMax) {
+    console.log("[polymarket] Order size $" + sizeByConfidence + " (" + confidence + "%) capped to $" + capMax + " by POLYMARKET_MAX_SIZE_USD.");
+  }
 
   const sideInfo = analysisToSide(analysis, null);
   if (!sideInfo) {

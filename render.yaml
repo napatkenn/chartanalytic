@@ -36,10 +36,11 @@ services:
       # Optional: wallet you see on polymarket.com (e.g. 0xa917...). Set if you fund via the website.
       - key: POLYMARKET_FUNDER_ADDRESS
         sync: false
+      # Order size scales with confidence ($10 at 60% to $20 at 80%+). Set to 20 to use full range.
       - key: POLYMARKET_MAX_SIZE_USD
-        value: "10"
+        value: "20"
       - key: POLYMARKET_MIN_CONFIDENCE
-        value: "65"
+        value: "60"
       - key: POLYMARKET_API_KEY
         sync: false
       - key: POLYMARKET_API_SECRET
