@@ -802,7 +802,7 @@ async function placePrediction(schedule, analysis, options = {}) {
       const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
       const negRisk = Boolean(marketInfo?.neg_risk);
 
-      // Use best ask (market price for BUY) so order fills at current market; fallback to 0.5 if unavailable
+      // Use best ask for BUY; add ticks to improve fill rate (we pay slightly more to get filled sooner)
       let price = 0.5;
       try {
         const priceRes = await client.getPrice(currentTokenId, "BUY");
@@ -810,6 +810,9 @@ async function placePrediction(schedule, analysis, options = {}) {
         if (Number.isFinite(p) && p > 0 && p <= 1) price = p;
       } catch (_) {}
       const tick = parseFloat(tickSize) || 0.01;
+      price = Math.round(price / tick) * tick;
+      const improveTicks = Math.max(0, Math.min(5, Number(process.env.POLYMARKET_PRICE_IMPROVE_TICKS) || 2));
+      if (improveTicks > 0) price = Math.min(0.99, price + tick * improveTicks);
       price = Math.round(price / tick) * tick;
       price = Math.max(tick, Math.min(0.99, price));
 
