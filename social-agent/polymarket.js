@@ -508,8 +508,18 @@ async function claimResolvedPositions() {
         conditionToIndexSets.get(cid).add(1).add(2); // fallback: both outcomes
       }
     }
-    const conditionIds = [...conditionToIndexSets.keys()];
+    let conditionIds = [...conditionToIndexSets.keys()];
     if (conditionIds.length === 0) return;
+
+    console.log("[polymarket] Data API:",
+      positions.length, "redeemable position(s) across", conditionIds.length, "condition(s) (markets)");
+
+    const maxPerRun = Number(process.env.POLYMARKET_REDEEM_MAX_PER_RUN) || 0;
+    if (maxPerRun > 0 && conditionIds.length > maxPerRun) {
+      conditionIds = conditionIds.slice(0, maxPerRun);
+      console.log("[polymarket] Limiting to first", maxPerRun, "conditions (POLYMARKET_REDEEM_MAX_PER_RUN). Run again to redeem the rest.");
+    }
+    console.log("[polymarket] Redeeming", conditionIds.length, "condition(s) for", funder);
 
     const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
     const secret = (process.env.POLY_BUILDER_SECRET || "").trim();
