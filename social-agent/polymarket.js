@@ -659,10 +659,11 @@ function withTimeout(promise, ms, message) {
  */
 async function placePrediction(schedule, analysis, options = {}) {
   const dryRun = options.dryRun === true;
-  const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 65;
+  const minConfidence = Number(process.env.POLYMARKET_MIN_CONFIDENCE) || 60;
   const MIN_ORDER_USD = 10;
-  const MAX_ORDER_USD = 10;
-  const maxSizeUsd = Math.max(MIN_ORDER_USD, Math.min(MAX_ORDER_USD, Number(process.env.POLYMARKET_MAX_SIZE_USD) || MAX_ORDER_USD));
+  const MAX_ORDER_USD = 20;
+  const envMaxSize = Number(process.env.POLYMARKET_MAX_SIZE_USD);
+  const capMax = Number.isFinite(envMaxSize) && envMaxSize > 0 ? Math.min(MAX_ORDER_USD, envMaxSize) : MAX_ORDER_USD;
 
   const assetKey = schedule.polymarketAsset;
   if (!assetKey) {
@@ -673,6 +674,13 @@ async function placePrediction(schedule, analysis, options = {}) {
   if (confidence < minConfidence) {
     return { placed: false, message: `Confidence ${confidence}% below min ${minConfidence}%; skip.` };
   }
+
+  // Order size scales with confidence: min at minConfidence, max at 100%
+  const range = Math.max(1, 100 - minConfidence);
+  const sizeUsd = Math.round(
+    MIN_ORDER_USD + ((confidence - minConfidence) / range) * (capMax - MIN_ORDER_USD)
+  );
+  const sizeUsdClamped = Math.max(MIN_ORDER_USD, Math.min(capMax, sizeUsd));
 
   const sideInfo = analysisToSide(analysis, null);
   if (!sideInfo) {
@@ -693,7 +701,7 @@ async function placePrediction(schedule, analysis, options = {}) {
   if (dryRun) {
     return {
       placed: false,
-      message: `[DRY-RUN] Would place ${sideInfo.side} $${maxSizeUsd} on "${market.question}" (confidence ${confidence}%).`,
+      message: `[DRY-RUN] Would place ${sideInfo.side} $${sizeUsdClamped} on "${market.question}" (confidence ${confidence}%).`,
     };
   }
 
@@ -760,8 +768,7 @@ async function placePrediction(schedule, analysis, options = {}) {
     const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
     const negRisk = Boolean(marketInfo?.neg_risk);
 
-    const size = Math.max(MIN_ORDER_USD, Math.min(maxSizeUsd, MAX_ORDER_USD));
-    const sizeForOrder = Number(size) >= MIN_ORDER_USD ? Number(size) : MIN_ORDER_USD;
+    const sizeForOrder = Math.max(MIN_ORDER_USD, Math.min(capMax, sizeUsdClamped));
 
     function isOrderbookExpiredError(errOrResp) {
       const apiError = typeof (errOrResp?.response?.data?.error ?? errOrResp?.data?.error) === "string"
@@ -842,7 +849,7 @@ async function placePrediction(schedule, analysis, options = {}) {
         return {
           placed: true,
           orderId,
-          message: `Placed ${sideInfo.side} $${size} at ${price} on "${currentMarket.question}" (order ${orderId}).`,
+          message: `Placed ${sideInfo.side} $${sizeForOrder} at ${price} on "${currentMarket.question}" (order ${orderId}).`,
         };
       } catch (err) {
         const status = err.response?.status ?? err.status;

@@ -76,6 +76,11 @@ async function runOne(schedule, options = {}) {
     if (!polymarket.isConfigured()) {
       console.warn(`[${schedule.id}] Polymarket not configured. Set POLYMARKET_PRIVATE_KEY in GitHub Actions secrets or in .env.`);
     } else {
+      const placeDelayMs = Number(process.env.POLYMARKET_PLACE_DELAY_MS) || 10000;
+      if (placeDelayMs > 0) {
+        console.log(`[${schedule.id}] Waiting ${placeDelayMs / 1000}s before placing order...`);
+        await new Promise((r) => setTimeout(r, placeDelayMs));
+      }
       console.log(`[${schedule.id}] Placing Polymarket prediction...`);
       try {
         const result = await polymarket.placePrediction(schedule, analysis, { dryRun });
@@ -123,12 +128,17 @@ async function captureOnly(schedule) {
   return outPath;
 }
 
-/** Analyze image and place Polymarket order (no capture). Returns place result or null if not configured. */
-async function analyzeAndPlaceOrder(schedule, imagePath, options = {}) {
-  const { dryRun = false } = options;
+/** Analyze image only (15m up/down). Returns { schedule, analysis } or null. */
+async function analyzeForPolymarket(schedule, imagePath) {
   if (!schedule.polymarketAsset) return null;
   console.log(`[${schedule.id}] Analyzing (next 15 min up/down)...`);
   const analysis = await analyzeImage(imagePath, { forPolymarket15m: true });
+  return { schedule, analysis };
+}
+
+/** Place Polymarket order from precomputed analysis. Returns place result or null. */
+async function placePolymarketOrder(schedule, analysis, options = {}) {
+  const { dryRun = false } = options;
   if (!polymarket.isConfigured()) {
     console.warn(`[${schedule.id}] Polymarket not configured. Skipping order.`);
     return null;
@@ -137,6 +147,24 @@ async function analyzeAndPlaceOrder(schedule, imagePath, options = {}) {
   const result = await polymarket.placePrediction(schedule, analysis, { dryRun });
   console.log(`[${schedule.id}] Done (Polymarket bot; no social post).`);
   return result;
+}
+
+/** Analyze image and place Polymarket order (no capture). Returns place result or null if not configured. */
+async function analyzeAndPlaceOrder(schedule, imagePath, options = {}) {
+  const { dryRun = false } = options;
+  const analyzed = await analyzeForPolymarket(schedule, imagePath);
+  if (!analyzed) return null;
+  const { schedule: s, analysis } = analyzed;
+  if (!polymarket.isConfigured()) {
+    console.warn(`[${s.id}] Polymarket not configured. Skipping order.`);
+    return null;
+  }
+  const placeDelayMs = Number(process.env.POLYMARKET_PLACE_DELAY_MS) || 10000;
+  if (placeDelayMs > 0) {
+    console.log(`[${s.id}] Waiting ${placeDelayMs / 1000}s before placing order...`);
+    await new Promise((r) => setTimeout(r, placeDelayMs));
+  }
+  return placePolymarketOrder(s, analysis, { dryRun });
 }
 
 async function main() {
@@ -242,14 +270,31 @@ async function main() {
       return;
     }
     console.log(`Phase 2: Analyzing and placing Polymarket orders for ${captured.length} asset(s) (parallel)...`);
+    const analysisResults = await Promise.allSettled(
+      captured.map(({ schedule, imagePath }) => analyzeForPolymarket(schedule, imagePath))
+    );
+    const withAnalysis = analysisResults
+      .filter((out) => out.status === "fulfilled" && out.value != null)
+      .map((out) => out.value);
+    analysisResults.forEach((out, i) => {
+      if (out.status === "rejected") {
+        console.error(`[${captured[i].schedule.id}] Analyze error:`, out.reason?.message || out.reason);
+        process.exitCode = 1;
+      }
+    });
+    const postAnalyzeDelayMs = Number(process.env.POLYMARKET_POST_ANALYZE_DELAY_MS) || 10000;
+    if (withAnalysis.length > 0 && postAnalyzeDelayMs > 0) {
+      console.log(`[polymarket] Waiting ${postAnalyzeDelayMs / 1000}s after analysis before placing orders...`);
+      await new Promise((r) => setTimeout(r, postAnalyzeDelayMs));
+    }
     const placeResults = await Promise.allSettled(
-      captured.map(({ schedule, imagePath }) => analyzeAndPlaceOrder(schedule, imagePath, { dryRun }))
+      withAnalysis.map(({ schedule, analysis }) => placePolymarketOrder(schedule, analysis, { dryRun }))
     );
     placeResults.forEach((out, i) => {
-      const { schedule } = captured[i];
+      const { schedule } = withAnalysis[i];
       if (out.status === "rejected") {
         process.exitCode = 1;
-        console.error(`[${schedule.id}] Analyze/place error:`, out.reason?.message || out.reason);
+        console.error(`[${schedule.id}] Place error:`, out.reason?.message || out.reason);
       } else if (out.value && out.value.message) {
         console.log(`[${schedule.id}] Polymarket:`, out.value.message);
         if (out.value.placed) console.log(`[${schedule.id}] Order ID:`, out.value.orderId);
