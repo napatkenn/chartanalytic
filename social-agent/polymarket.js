@@ -476,13 +476,43 @@ const PARENT_COLLECTION_ID = "0x" + "00".repeat(32);
  */
 async function claimResolvedPositions() {
   try {
-    // Use platform trading wallet (POLYMARKET_FUNDER_ADDRESS) for positions when set; else funder from default key.
-    const funder =
-      (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim().match(/^0x[a-fA-F0-9]{40}$/)?.[0] ||
-      getFunderAddress();
-    if (!funder) return;
+    const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
+    const secret = (process.env.POLY_BUILDER_SECRET || "").trim();
+    const passphrase = (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
+    if (!key || !secret || !passphrase) {
+      console.warn("[polymarket] Builder credentials not set; skipping claim.");
+      return;
+    }
 
-    const url = `${DATA_API}/positions?user=${encodeURIComponent(funder)}&redeemable=true&limit=100`;
+    const privateKey = (
+      (process.env.POLYMARKET_REDEEM_PRIVATE_KEY || "").trim() ||
+      (process.env.POLYMARKET_PRIVATE_KEY || "").trim()
+    );
+    if (!privateKey || !privateKey.startsWith("0x")) {
+      console.warn("[polymarket] No POLYMARKET_PRIVATE_KEY (or POLYMARKET_REDEEM_PRIVATE_KEY); skipping claim.");
+      return;
+    }
+
+    // Key's proxy = address that receives redeemed USDC (relayer only pays out to this).
+    let keyProxy;
+    try {
+      const { getContractConfig } = require("@polymarket/builder-relayer-client/dist/config");
+      const { deriveProxyWallet } = require("@polymarket/builder-relayer-client/dist/builder/derive");
+      const { Wallet } = require("ethers");
+      const signer = new Wallet(privateKey);
+      const proxyFactory = getContractConfig(CHAIN_ID).ProxyContracts.ProxyFactory;
+      keyProxy = deriveProxyWallet(signer.address, proxyFactory);
+    } catch (e) {
+      const { privateKeyToAccount } = require("viem/accounts");
+      keyProxy = privateKeyToAccount(privateKey).address;
+    }
+    if (!keyProxy) return;
+
+    const envFunder = (process.env.POLYMARKET_FUNDER_ADDRESS || "").trim().match(/^0x[a-fA-F0-9]{40}$/)?.[0];
+    // Query positions for POLYMARKET_FUNDER_ADDRESS when set (e.g. UI wallet), else key's proxy.
+    const queryFunder = envFunder || keyProxy;
+    console.log("[polymarket] Checking redeemable positions for", queryFunder, envFunder ? "(POLYMARKET_FUNDER_ADDRESS)" : "(Builder proxy)");
+    const url = `${DATA_API}/positions?user=${encodeURIComponent(queryFunder)}&redeemable=true&limit=100`;
     const res = await pmFetch(url);
     if (!res.ok) {
       console.warn("[polymarket] Claim: Data API positions failed", res.status);
@@ -490,8 +520,17 @@ async function claimResolvedPositions() {
     }
     const positions = await res.json().catch(() => []);
     if (!Array.isArray(positions) || positions.length === 0) {
+      console.log("[polymarket] No redeemable positions for", queryFunder);
       return;
     }
+
+    if (envFunder && envFunder.toLowerCase() !== keyProxy.toLowerCase()) {
+      console.warn("[polymarket] Positions are for", envFunder, "but redeeming would send USDC to the key's proxy", keyProxy, "only.");
+      console.warn("[polymarket] To claim these to your UI wallet, set POLYMARKET_REDEEM_PRIVATE_KEY to the key whose Builder proxy is", envFunder + ", then run again.");
+      return;
+    }
+
+    const funder = keyProxy;
 
     // Build per-condition list of winning index sets only (redeemable = winning).
     // CTF: outcomeIndex 0 → indexSet 1 (Yes), outcomeIndex 1 → indexSet 2 (No).
@@ -513,31 +552,14 @@ async function claimResolvedPositions() {
 
     console.log("[polymarket] Data API:",
       positions.length, "redeemable position(s) across", conditionIds.length, "condition(s) (markets)");
+    console.log("[polymarket] Redeeming", conditionIds.length, "condition(s). Claimed USDC will be sent to", funder);
 
     const maxPerRun = Number(process.env.POLYMARKET_REDEEM_MAX_PER_RUN) || 0;
     if (maxPerRun > 0 && conditionIds.length > maxPerRun) {
       conditionIds = conditionIds.slice(0, maxPerRun);
       console.log("[polymarket] Limiting to first", maxPerRun, "conditions (POLYMARKET_REDEEM_MAX_PER_RUN). Run again to redeem the rest.");
     }
-    console.log("[polymarket] Redeeming", conditionIds.length, "condition(s) for", funder);
 
-    const key = (process.env.POLY_BUILDER_API_KEY || "").trim();
-    const secret = (process.env.POLY_BUILDER_SECRET || "").trim();
-    const passphrase = (process.env.POLY_BUILDER_PASSPHRASE || "").trim();
-    if (!key || !secret || !passphrase) {
-      console.warn("[polymarket] Builder credentials not set; skipping claim.");
-      return;
-    }
-
-    // Use dedicated redeem key when redeeming for a different wallet (e.g. platform trading wallet).
-    const privateKey = (
-      (process.env.POLYMARKET_REDEEM_PRIVATE_KEY || "").trim() ||
-      (process.env.POLYMARKET_PRIVATE_KEY || "").trim()
-    );
-    if (!privateKey || !privateKey.startsWith("0x")) {
-      console.warn("[polymarket] No POLYMARKET_PRIVATE_KEY (or POLYMARKET_REDEEM_PRIVATE_KEY); skipping claim.");
-      return;
-    }
     const { createWalletClient, http } = require("viem");
     const { privateKeyToAccount } = require("viem/accounts");
     const { polygon } = require("viem/chains");
