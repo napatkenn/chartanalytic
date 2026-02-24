@@ -772,27 +772,27 @@ async function placePrediction(schedule, analysis, options = {}) {
       const tickSize = String(marketInfo?.minimum_tick_size ?? "0.01");
       const negRisk = Boolean(marketInfo?.neg_risk);
 
-      // Use best ask (market price for BUY) so order fills at current market; fallback to 0.5 if unavailable
-      let price = 0.5;
+      // FAK market order: use best ask as worst-price limit (slippage protection); fill what's available, cancel rest
+      let worstPrice = 0.5;
       try {
         const priceRes = await client.getPrice(currentTokenId, "BUY");
         const p = typeof priceRes === "number" ? priceRes : (priceRes?.price != null ? Number(priceRes.price) : NaN);
-        if (Number.isFinite(p) && p > 0 && p <= 1) price = p;
+        if (Number.isFinite(p) && p > 0 && p <= 1) worstPrice = p;
       } catch (_) {}
       const tick = parseFloat(tickSize) || 0.01;
-      price = Math.round(price / tick) * tick;
-      price = Math.max(tick, Math.min(0.99, price));
+      worstPrice = Math.round(worstPrice / tick) * tick;
+      worstPrice = Math.max(tick, Math.min(0.99, worstPrice + tick * 2)); // small slippage buffer for FAK
 
       try {
-        const response = await client.createAndPostOrder(
+        const response = await client.createAndPostMarketOrder(
           {
             tokenID: currentTokenId,
-            price,
-            size: sizeForOrder,
             side: Side.BUY,
+            amount: sizeForOrder, // dollar amount for BUY (market order)
+            price: worstPrice,
           },
           { tickSize, negRisk },
-          OrderType.GTC
+          OrderType.FAK
         );
 
         const orderId = response?.orderID ?? response?.orderId;
@@ -820,7 +820,7 @@ async function placePrediction(schedule, analysis, options = {}) {
         return {
           placed: true,
           orderId,
-          message: `Placed ${sideInfo.side} $${size} at ${price} on "${currentMarket.question}" (order ${orderId}).`,
+          message: `Placed ${sideInfo.side} $${size} (FAK, worst ${worstPrice}) on "${currentMarket.question}" (order ${orderId}).`,
         };
       } catch (err) {
         const status = err.response?.status ?? err.status;
