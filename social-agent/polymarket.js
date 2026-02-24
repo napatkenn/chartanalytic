@@ -675,12 +675,9 @@ async function placePrediction(schedule, analysis, options = {}) {
     return { placed: false, message: `Confidence ${confidence}% below min ${minConfidence}%; skip.` };
   }
 
-  // Order size scales with confidence: min at minConfidence, max at 100%
-  const range = Math.max(1, 100 - minConfidence);
-  const sizeUsd = Math.round(
-    MIN_ORDER_USD + ((confidence - minConfidence) / range) * (capMax - MIN_ORDER_USD)
-  );
-  const sizeUsdClamped = Math.max(MIN_ORDER_USD, Math.min(capMax, sizeUsd));
+  // Order size scales with confidence: $1 per 2% above min (60% -> $10, 62% -> $11, ..., 80%+ -> $20)
+  const steps = Math.max(0, Math.floor((confidence - minConfidence) / 2));
+  const sizeUsdClamped = Math.max(MIN_ORDER_USD, Math.min(capMax, MIN_ORDER_USD + steps));
 
   const sideInfo = analysisToSide(analysis, null);
   if (!sideInfo) {
@@ -752,7 +749,7 @@ async function placePrediction(schedule, analysis, options = {}) {
   }
 
   // Gasless only did the on-chain approval; the actual prediction is placed via CLOB order below.
-  console.log("[polymarket] Placing CLOB order...");
+  console.log("[polymarket] Placing CLOB order...", `$${sizeUsdClamped} (${confidence}% confidence)`);
   await new Promise((r) => setTimeout(r, 5000));
   try {
     const getClientWithRetry = () => withTimeout(getClient(), 60000, "CLOB client / API key timed out (60s)");
@@ -849,7 +846,7 @@ async function placePrediction(schedule, analysis, options = {}) {
         return {
           placed: true,
           orderId,
-          message: `Placed ${sideInfo.side} $${sizeForOrder} at ${price} on "${currentMarket.question}" (order ${orderId}).`,
+          message: `Placed ${sideInfo.side} $${sizeForOrder} at ${price} (${confidence}% confidence) on "${currentMarket.question}" (order ${orderId}).`,
         };
       } catch (err) {
         const status = err.response?.status ?? err.status;

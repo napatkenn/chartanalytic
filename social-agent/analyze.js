@@ -49,7 +49,12 @@ async function analyzeImageViaApp(imagePath, _options = {}) {
 
   const data = await res.json();
   if (!data.analysis) throw new Error("Chart Analytic API: missing analysis in response");
-  return data.analysis;
+  const analysis = data.analysis;
+  if (analysis.confidence != null) {
+    const n = Number(analysis.confidence);
+    analysis.confidence = Math.min(100, Math.max(0, Number.isFinite(n) ? Math.round(n) : 0));
+  }
+  return analysis;
 }
 
 const ANALYSIS_PROMPT = `You are an expert technical analyst. Analyze the provided trading chart screenshot.
@@ -65,7 +70,7 @@ Return a structured analysis in the following JSON format only (no markdown, no 
   "takeProfit2": "optional second TP level",
   "stopLoss2": "optional second SL level",
   "riskReward": "e.g. 1:2 or 1:1.5",
-  "confidence": 0-100 integer,
+  "confidence": 0-100 integer (whole number; how sure you are about the bias),
   "reasoning": "2-4 sentences on price action, trend, and momentum",
   "symbol": "trading pair if visible",
   "timeframe": "timeframe if visible"
@@ -84,13 +89,13 @@ Return a structured analysis in the following JSON format only (no markdown, no 
   "takeProfit": "brief",
   "stopLoss": "brief",
   "riskReward": "e.g. 1:1",
-  "confidence": 0-100 integer,
+  "confidence": 0-100 integer and precise for example 66, 72, 89, 99 (how sure you are about UP vs DOWN in the next 15 min; must be a whole number),
   "reasoning": "2-3 sentences focused on why price will be UP or DOWN in the next 15 minutes only. Consider momentum, recent candles, and key levels.",
   "symbol": "trading pair if visible",
   "timeframe": "1m"
 }
 
-Rules: Use ONLY "bullish" (for UP) or "bearish" (for DOWN). Do not use "range". Confidence should reflect how sure you are about the next 15-minute direction.`;
+Rules: Use ONLY "bullish" (for UP) or "bearish" (for DOWN). Do not use "range". Confidence must be an integer 0-100  and precise for example 66, 72, 89, 99 etc, and reflect how sure you are about the next 15-minute direction (e.g. 55 = slight edge, 70 = fairly confident, 85 = high conviction).`;
 
 /** Analyze via OpenAI directly (same logic as main app). */
 async function analyzeImageOpenAI(imagePath, options = {}) {
@@ -128,6 +133,11 @@ async function analyzeImageOpenAI(imagePath, options = {}) {
   const parsed = JSON.parse(jsonStr);
   if (forPolymarket15m && parsed.marketBias === "range") {
     parsed.marketBias = parsed.confidence >= 50 ? "bullish" : "bearish";
+  }
+  // Normalize confidence to 0-100 integer (model may return float or out-of-range)
+  if (parsed.confidence != null) {
+    const n = Number(parsed.confidence);
+    parsed.confidence = Math.min(100, Math.max(0, Number.isFinite(n) ? Math.round(n) : 0));
   }
   return parsed;
 }
